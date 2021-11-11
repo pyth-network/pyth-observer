@@ -1,0 +1,6 @@
+aiohttp<4.0.0a1
+dnspython
+loguru
+pytz
+# Add "pyth-client-py" when this is open sourced and there is a relese on pypi
+#-e git+https://github.com/pyth-network/pyth-client-py.git@02ccfe891ce021869560a84006be6d5a031f5c86#egg=pythclient
