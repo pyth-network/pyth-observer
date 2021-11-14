@@ -1,15 +1,12 @@
-FROM python:3.8
+# syntax=docker/dockerfile:1.2
 
-ADD . /data
+FROM docker.io/pythfoundation/pyth-client-py:v0.0.1
+
+COPY . /data
 
 WORKDIR /data
 
-RUN cd pyth-client-py && \
-    python setup.py install && \
-    cd .. && \
-    rm -rf pyth-client-py && \
-    git clean -fdx && \
-    pip install -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
 
 ENTRYPOINT ["python3", "/data/observer.py"]
 CMD ["-l", "debug", "--network", "devnet"]
