@@ -5,20 +5,15 @@ published data.
 
 ## Developer Setup
 
-This requires the not yet public
-[pyth-client-py](https://github.com/pyth-network/pyth-client-py) library.
+### Requirements
+- Python 3.7
+- https://pypi.org/project/pythclient/ library at [pyth-client-py](https://github.com/pyth-network/pyth-client-py).
+
 Create a virtual environment and install all dependencies:
 
     pushd $(pwd)
     python3 -m venv ve
     . ve/bin/activate
-
-Clone the `pyth-client-py` library and add it into the virtualenv:
-
-    git clone https://github.com/pyth-network/pyth-client-py.git
-    cd pyth-client-py
-    python setup.py install
-    cd ..
 
 Install the pyth-observer dependencies:
 

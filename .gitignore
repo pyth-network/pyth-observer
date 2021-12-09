@@ -3,3 +3,4 @@ ve
 venv
 pyth-client-py
 publishers.json
+**/__pycache__
