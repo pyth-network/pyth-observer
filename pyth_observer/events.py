@@ -290,7 +290,7 @@ class TWAPvsAggregate(PriceAccountValidationEvent):
         )
         aggregate_price = self.price_account.aggregate_price
 
-        self.deviation = abs((self.twap - aggregate_price) / 100)
+        self.deviation = 100 * abs(self.twap - aggregate_price) / aggregate_price
 
         if self.deviation > self.threshold:
             return False
