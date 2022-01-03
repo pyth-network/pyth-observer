@@ -1,18 +1,18 @@
 #!/usr/bin/env python3
+import argparse
+import asyncio
+import json
 import os
 import sys
-import json
-import argparse
 
 from aiohttp import ClientConnectorError
-import asyncio
 from loguru import logger
-
-from pythclient.pythclient import PythClient
+from prometheus_client import Gauge, start_http_server
 from pythclient.exceptions import SolanaException
-
+from pythclient.pythclient import PythClient
 from pythclient.ratelimit import RateLimit
-from pyth_observer import get_solana_urls, get_key
+
+from pyth_observer import get_key, get_solana_urls
 from pyth_observer.prices import Price, PriceValidator
 
 logger.enable("pythclient")
@@ -48,9 +48,7 @@ async def main(args):
 
         validators = {}
 
-        logger.info(
-            "Starting pyth-observer against {}: {}", args.network, http_url
-        )
+        logger.info("Starting pyth-observer against {}: {}", args.network, http_url)
         while True:
             try:
                 await c.refresh_all_prices()
@@ -102,6 +100,13 @@ async def main(args):
                         price.quoter_aggregates[
                             publisher
                         ] = price_comp.last_aggregate_price_info
+
+                        if args.enable_prometheus:
+                            gprice.labels(
+                                symbol=symbol,
+                                publisher=publisher,
+                                status=price.quoters[publisher].price_status.name,
+                            ).set(price.quoters[publisher].price)
 
                     # Where the magic happens!
                     price_errors = validators[symbol].verify_price(
@@ -168,11 +173,30 @@ if __name__ == "__main__":
         default=False,
         help="Include alerts which might be excessively noisy when used for all publishers",
     )
+    parser.add_argument(
+        "-p",
+        "--enable-prometheus",
+        action="store_true",
+        default=False,
+        help="Enable Prometheus Monitoring exporter",
+    )
+    parser.add_argument(
+        "--prometheus-port",
+        type=int,
+        default=9001,
+        help="Prometheus Exporter port",
+    )
     args = parser.parse_args()
 
     logger.remove()
     logger.add(sys.stderr, level=args.log_level)
     try:
+        if args.enable_prometheus:
+            logger.info(f"Starting Prometheus Exporter on port {args.prometheus_port}")
+            start_http_server(port=args.prometheus_port)
+            gprice = Gauge(
+                "crypto_price", "Price", labelnames=["symbol", "publisher", "status"]
+            )
         asyncio.run(main(args=args))
     except KeyboardInterrupt:
         logger.info("Exiting on CTRL-c")
