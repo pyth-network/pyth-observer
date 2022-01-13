@@ -1,18 +1,17 @@
 #!/usr/bin/env python3
+import argparse
+import asyncio
+import json
 import os
 import sys
-import json
-import argparse
 
 from aiohttp import ClientConnectorError
-import asyncio
 from loguru import logger
-
-from pythclient.pythclient import PythClient
 from pythclient.exceptions import SolanaException
-
+from pythclient.pythclient import PythClient
 from pythclient.ratelimit import RateLimit
-from pyth_observer import get_solana_urls, get_key
+
+from pyth_observer import get_key, get_solana_urls
 from pyth_observer.prices import Price, PriceValidator
 
 logger.enable("pythclient")
@@ -48,9 +47,7 @@ async def main(args):
 
         validators = {}
 
-        logger.info(
-            "Starting pyth-observer against {}: {}", args.network, http_url
-        )
+        logger.info("Starting pyth-observer against {}: {}", args.network, http_url)
         while True:
             try:
                 await c.refresh_all_prices()
