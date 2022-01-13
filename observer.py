@@ -7,7 +7,6 @@ import sys
 
 from aiohttp import ClientConnectorError
 from loguru import logger
-from prometheus_client import Gauge, start_http_server
 from pythclient.exceptions import SolanaException
 from pythclient.pythclient import PythClient
 from pythclient.ratelimit import RateLimit
@@ -101,13 +100,6 @@ async def main(args):
                             publisher
                         ] = price_comp.last_aggregate_price_info
 
-                        if args.enable_prometheus:
-                            gprice.labels(
-                                symbol=symbol,
-                                publisher=publisher,
-                                status=price.quoters[publisher].price_status.name,
-                            ).set(price.quoters[publisher].price)
-
                     # Where the magic happens!
                     price_errors = validators[symbol].verify_price(
                         price=price, include_noisy=args.include_noisy_alerts
@@ -173,30 +165,11 @@ if __name__ == "__main__":
         default=False,
         help="Include alerts which might be excessively noisy when used for all publishers",
     )
-    parser.add_argument(
-        "-p",
-        "--enable-prometheus",
-        action="store_true",
-        default=False,
-        help="Enable Prometheus Monitoring exporter",
-    )
-    parser.add_argument(
-        "--prometheus-port",
-        type=int,
-        default=9001,
-        help="Prometheus Exporter port",
-    )
     args = parser.parse_args()
 
     logger.remove()
     logger.add(sys.stderr, level=args.log_level)
     try:
-        if args.enable_prometheus:
-            logger.info(f"Starting Prometheus Exporter on port {args.prometheus_port}")
-            start_http_server(port=args.prometheus_port)
-            gprice = Gauge(
-                "crypto_price", "Price", labelnames=["symbol", "publisher", "status"]
-            )
         asyncio.run(main(args=args))
     except KeyboardInterrupt:
         logger.info("Exiting on CTRL-c")
