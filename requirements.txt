@@ -3,4 +3,6 @@ dnspython
 loguru
 pytz
 pythclient
+# Testing
 pytest
+pytest-mock

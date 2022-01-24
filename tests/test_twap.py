@@ -42,3 +42,5 @@ def test_averages():
     check_average(49132540, 48121502, 3, None)
     # outside 10%
     check_average(49132540, 43121502, 3, "ZZZT Aggregate is 14% different than TWAP")
+    # 0.0 aggregate happens occasionally when a publisher publishes bad data
+    check_average(49132540, 0.0, 3, None)
