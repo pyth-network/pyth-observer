@@ -21,6 +21,10 @@ Install the pyth-observer dependencies:
 pip install -r requirements.txt
 ```
 
+### Unit Tests
+
+Run the unit tests by running `pytest` from the repository root.
+
 ## Environment Variables
 
 | **Name**                                    | **Default** | **Description**                                      |
