@@ -40,7 +40,7 @@ Run the unit tests by running `pytest` from the repository root.
 By default, pyth observer only logs to stderr:
 
 ```shell
-./observer -l debug --network=mainnet
+./observer.py -l debug --network=mainnet
 ```
 
 Use the `trace` log level to see exactly what is going on.
