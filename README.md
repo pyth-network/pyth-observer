@@ -21,6 +21,10 @@ Install the pyth-observer dependencies:
 pip install -r requirements.txt
 ```
 
+### Unit Tests
+
+Run the unit tests by running `pytest` from the repository root.
+
 ## Environment Variables
 
 | **Name**                                    | **Default** | **Description**                                      |
@@ -36,7 +40,7 @@ pip install -r requirements.txt
 By default, pyth observer only logs to stderr:
 
 ```shell
-./observer -l debug --network=mainnet
+./observer.py -l debug --network=mainnet
 ```
 
 Use the `trace` log level to see exactly what is going on.

@@ -3,6 +3,8 @@ dnspython
 loguru
 pytz
 pythclient
+typing_extensions
+
 # Testing
 pytest
 pythclient==0.0.2

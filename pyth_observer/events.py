@@ -2,7 +2,7 @@ import os
 import datetime
 from typing import Tuple, List, Optional
 
-from pythclient.pythaccounts import TwEmaType
+from pythclient.pythaccounts import TwEmaType, PythPriceAccount
 
 
 # The validators for Prices
@@ -147,7 +147,9 @@ class ImprobableAggregate(PriceValidationEvent):
         # The normalized confidence
         self.confidence = abs(delta / self.publisher_aggregate.confidence_interval)
 
-        if self.confidence > self.threshold:
+        if (self.price.is_publishing(self.publisher_key) and
+                self.price.is_aggregate_publishing() and
+                self.confidence > self.threshold):
             return False
         return True
 
@@ -183,10 +185,11 @@ class PriceDeviation(PriceValidationEvent):
 
     def is_valid(self) -> bool:
         delta = self.publisher_aggregate.price - self.price.aggregate.price
-
         self.deviation = abs(delta / self.price.aggregate.price) * 100
 
-        if self.deviation > self.threshold:
+        if (self.price.is_publishing(self.publisher_key) and
+                self.price.is_aggregate_publishing() and
+                self.deviation > self.threshold):
             return False
         return True
 

@@ -56,6 +56,13 @@ class Price:
             publisher_key,
         )
 
+    def is_aggregate_publishing(self) -> bool:
+        """
+        Is the aggregate price currently updating? Returns false if the aggregate price is not
+        updating for any reason (e.g., too few active publishers).
+        """
+        return self.aggregate.price_status == PythPriceStatus.TRADING
+
     def is_publishing(self, publisher_key: str) -> bool:
         """
         Is a publisher publishing for a given symbol?
