@@ -77,7 +77,7 @@ class ValidationEvent:
         if self.publisher_key is None:
             # e.g.: negative-twap-SHIB/USD
             return f"{self.error_code}-{self.symbol}"
-        # e.g.: jump-bad-confidence-BTC/USD
+        # e.g.: pubname-bad-confidence-BTC/USD
         return f"{self.publisher_name}-{self.error_code}-{self.symbol}"
 
 
