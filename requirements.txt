@@ -3,7 +3,9 @@ dnspython
 loguru
 pytz
 pythclient
+# Testing
 pytest
 pythclient==0.0.2
 prometheus-client==0.12.0
 typing-extensions==3.10.0.2
+pytest-mock
