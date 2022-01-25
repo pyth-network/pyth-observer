@@ -29,7 +29,7 @@ def get_publishers(network):
     except (OSError, ValueError, TypeError, FileNotFoundError):
         logger.error("problem loading publishers.json only keys will be printed")
         json_data = {}
-    return {key: name for name, key in json_data.get(network, {}).items()}
+    return json_data.get(network, {})
 
 
 async def main(args):

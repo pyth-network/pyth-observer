@@ -52,8 +52,8 @@ class Price:
 
     def publisher_name(self, publisher_key: str) -> str:
         return self._publishers.get(
-            publisher_key,
-            publisher_key,
+            publisher_key.lower(),
+            publisher_key.lower(),
         )
 
     def is_aggregate_publishing(self) -> bool:
