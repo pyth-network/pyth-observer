@@ -199,8 +199,8 @@ class PriceDeviation(PriceValidationEvent):
 
         title = f"{self.publisher_name.upper()} price is {self.deviation:.0f}% off on {self.symbol}"
         details = [
-            f"Aggregate: {agg.price:.2f} (slot {agg.slot})",
-            f"Published:  {published.price:.2f} (slot {published.slot})",
+            f"Aggregate: {agg.price:.2f} ± {agg.confidence_interval:.2f} (slot {agg.slot})",
+            f"Published:  {published.price:.2f} ± {published.confidence_interval:.2f} (slot {published.slot})",
         ]
         return title, details
 
