@@ -199,7 +199,7 @@ class PriceDeviation(PriceValidationEvent):
     def get_event_details(self) -> Tuple[str, List[str]]:
         agg = self.price.aggregate
         published = self.publisher_aggregate
-        if not hasattr(self, 'deviation'):
+        if self.price.aggregate.price == 0:
             title = f"Aggregate price is $0 on {self.symbol}"
             details = [
                 f"Aggregate: {agg.price:.2f} ± {agg.confidence_interval:.2f} (slot {agg.slot})",
