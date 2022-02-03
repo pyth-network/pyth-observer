@@ -186,9 +186,7 @@ class PriceDeviation(PriceValidationEvent):
     def is_valid(self) -> bool:
         delta = self.publisher_aggregate.price - self.price.aggregate.price
         if self.price.aggregate.price == 0:
-            # TODO: add another alert that validates whether the aggregate price is close to the truth
-            return True
-
+            return False
         self.deviation = abs(delta / self.price.aggregate.price) * 100
 
         if (self.price.is_publishing(self.publisher_key) and
@@ -256,7 +254,7 @@ class NegativeTWAP(PriceAccountValidationEvent):
 
         title = f"{self.symbol} negative TWAP"
         details = [
-            f"TWAP: {self.twap:.2f} (slot self{self.price_account.slot})",
+            f"TWAP: {self.twap:.2f} (slot {self.price_account.slot})",
             f"Aggregate: {agg_price:.2f} (slot {self.price_account.aggregate_price_info.slot})",
         ]
         return title, details
