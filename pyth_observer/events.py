@@ -186,7 +186,6 @@ class PriceDeviation(PriceValidationEvent):
     def is_valid(self) -> bool:
         delta = self.publisher_aggregate.price - self.price.aggregate.price
         if self.price.aggregate.price == 0:
-            self.deviation = 0
             return False
         self.deviation = abs(delta / self.price.aggregate.price) * 100
 
