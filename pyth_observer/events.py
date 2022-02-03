@@ -241,6 +241,8 @@ class StoppedPublishing(PriceValidationEvent):
             f"Published last slot: {self.publisher_latest.slot}"
         )
 
+        return title, details
+
 
 # Price Account events
 
