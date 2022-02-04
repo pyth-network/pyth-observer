@@ -188,13 +188,12 @@ class PriceDeviation(PriceValidationEvent):
         if self.price.aggregate.price == 0:
             #TODO: add another alert that validates whether the aggregate price is close to the truth
             return False
-        else:
-            self.deviation = abs(delta / self.price.aggregate.price) * 100
+        self.deviation = abs(delta / self.price.aggregate.price) * 100
 
-            if (self.price.is_publishing(self.publisher_key) and
-                    self.price.is_aggregate_publishing() and
-                    self.deviation > self.threshold):
-                return False
+        if (self.price.is_publishing(self.publisher_key) and
+                self.price.is_aggregate_publishing() and
+                self.deviation > self.threshold):
+            return False
         return True
 
     def get_event_details(self) -> Tuple[str, List[str]]:
