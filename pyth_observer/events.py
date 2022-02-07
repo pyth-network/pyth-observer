@@ -186,8 +186,8 @@ class PriceDeviation(PriceValidationEvent):
     def is_valid(self) -> bool:
         delta = self.publisher_aggregate.price - self.price.aggregate.price
         if self.price.aggregate.price == 0:
-            #TODO: add another alert that validates whether the aggregate price is close to the truth
-            return False
+            # TODO: add another alert that validates whether the aggregate price is close to the truth
+            return True
         else:
             self.deviation = abs(delta / self.price.aggregate.price) * 100
 
@@ -200,18 +200,11 @@ class PriceDeviation(PriceValidationEvent):
     def get_event_details(self) -> Tuple[str, List[str]]:
         agg = self.price.aggregate
         published = self.publisher_aggregate
-        if self.price.aggregate.price == 0:
-            title = f"Aggregate price is 0 on {self.symbol}"
-            details = [
-                f"Aggregate: {agg.price:.2f} ± {agg.confidence_interval:.2f} (slot {agg.slot})",
-                f"Published:  {published.price:.2f} ± {published.confidence_interval:.2f} (slot {published.slot})",
-            ]
-        else:
-            title = f"{self.publisher_name.upper()} price is {self.deviation:.0f}% off on {self.symbol}"
-            details = [
-                f"Aggregate: {agg.price:.2f} ± {agg.confidence_interval:.2f} (slot {agg.slot})",
-                f"Published:  {published.price:.2f} ± {published.confidence_interval:.2f} (slot {published.slot})",
-            ]
+        title = f"{self.publisher_name.upper()} price is {self.deviation:.0f}% off on {self.symbol}"
+        details = [
+            f"Aggregate: {agg.price:.2f} ± {agg.confidence_interval:.2f} (slot {agg.slot})",
+            f"Published:  {published.price:.2f} ± {published.confidence_interval:.2f} (slot {published.slot})",
+        ]
         return title, details
 
 
