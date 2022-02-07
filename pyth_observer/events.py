@@ -185,6 +185,10 @@ class PriceDeviation(PriceValidationEvent):
 
     def is_valid(self) -> bool:
         delta = self.publisher_aggregate.price - self.price.aggregate.price
+        if self.price.aggregate.price == 0:
+            # TODO: add another alert that validates whether the aggregate price is close to the truth
+            return True
+
         self.deviation = abs(delta / self.price.aggregate.price) * 100
 
         if (self.price.is_publishing(self.publisher_key) and
@@ -196,7 +200,6 @@ class PriceDeviation(PriceValidationEvent):
     def get_event_details(self) -> Tuple[str, List[str]]:
         agg = self.price.aggregate
         published = self.publisher_aggregate
-
         title = f"{self.publisher_name.upper()} price is {self.deviation:.0f}% off on {self.symbol}"
         details = [
             f"Aggregate: {agg.price:.2f} ± {agg.confidence_interval:.2f} (slot {agg.slot})",
@@ -231,6 +234,8 @@ class StoppedPublishing(PriceValidationEvent):
             f"Aggregate last slot: {self.price.aggregate.slot}"
             f"Published last slot: {self.publisher_latest.slot}"
         )
+
+        return title, details
 
 
 # Price Account events
