@@ -22,8 +22,4 @@ class Calendar():
                 return True
             return False
         # all other markets (crypto, fx, metal)
-<<<<<<< HEAD
         return True
-=======
-        return True
->>>>>>> cd64f1a (add calendar.py)
