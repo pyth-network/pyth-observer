@@ -1,15 +1,23 @@
 import os
 import datetime
+import pytz
 from typing import Tuple, List, Optional
 
-from pythclient.pythaccounts import TwEmaType, PythPriceAccount
+from pythclient.pythaccounts import TwEmaType, PythPriceStatus
+
+from pyth_observer.calendar import Calendar
 
 
 # The validators for Prices
 price_validators = []
 
-# The vlaidators for Price Accounts
+# The validators for Price Accounts
 price_account_validators = []
+
+calendar = Calendar()
+
+MAX_SLOT_DIFFERENCE = 25
+TZ = pytz.timezone('America/New_York')
 
 
 class RegisterValidator(type):
@@ -232,11 +240,34 @@ class StoppedPublishing(PriceValidationEvent):
             f"Aggregate last slot: {self.price.aggregate.slot}"
             f"Published last slot: {self.publisher_latest.slot}"
         )
-
         return title, details
 
 
 # Price Account events
+
+
+class LatePublishingOrUnknown(PriceAccountValidationEvent):
+    """
+    When a price hasn't updated its price in > 25 slots OR its status is unknown.
+    """
+    error_code: str = "no-updates-25-slots-or-unknown"
+
+    def is_valid(self) -> bool:
+        self.slot_diff = self.price_account.slot - self.price_account.aggregate_price_info.slot
+
+        if self.slot_diff > MAX_SLOT_DIFFERENCE or self.price_account.aggregate_price_info.price_status == PythPriceStatus.UNKNOWN:
+            market_open = calendar.is_market_open(self.price_account.product, datetime.datetime.now(tz=TZ))
+            if market_open:
+                return False
+        return True
+
+    def get_event_details(self) -> Tuple[str, List[str]]:
+        title = f"{self.symbol} stopped receiving price updates for more than {MAX_SLOT_DIFFERENCE} slots or status is unknown"
+        details = [
+            f"Slot Difference: {self.slot_diff}",
+            f"Status: {self.price_account.aggregate_price_info.price_status}"
+        ]
+        return title, details
 
 
 class NegativeTWAP(PriceAccountValidationEvent):
