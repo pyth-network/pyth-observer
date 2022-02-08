@@ -1,11 +1,28 @@
 import datetime
+import pytz
 
-EQUITY_OPEN = datetime.time(9, 30, 0)
-EQUITY_CLOSE = datetime.time(16, 0, 0)
-EQUITY_EARLY_CLOSE = datetime.time(13, 0, 0)
-EQUITY_HOLIDAYS = ["17-01-2022", "08-02-2022", "21-02-2022", "15-04-2022", "30-05-2022",
-                   "20-06-2022", "04-07-2022", "05-09-2022", "24-11-2022", "25-11-2022", "26-12-2022"]
-EQUITY_EARLY_HOLIDAYS = ["08-02-2022", "25-11-2022"]
+TZ = pytz.timezone('America/New_York')
+
+EQUITY_OPEN = datetime.time(9, 30, 0, tzinfo=TZ)
+EQUITY_CLOSE = datetime.time(16, 0, 0, tzinfo=TZ)
+EQUITY_EARLY_CLOSE = datetime.time(13, 0, 0, tzinfo=TZ)
+EQUITY_HOLIDAYS = [
+    datetime.datetime(2022, 1, 17, tzinfo=TZ).date(),
+    datetime.datetime(2022, 2, 8, tzinfo=TZ).date(),
+    datetime.datetime(2022, 2, 21, tzinfo=TZ).date(),
+    datetime.datetime(2022, 4, 15, tzinfo=TZ).date(),
+    datetime.datetime(2022, 5, 30, tzinfo=TZ).date(),
+    datetime.datetime(2022, 6, 20, tzinfo=TZ).date(),
+    datetime.datetime(2022, 7, 4, tzinfo=TZ).date(),
+    datetime.datetime(2022, 9, 5, tzinfo=TZ).date(),
+    datetime.datetime(2022, 11, 24, tzinfo=TZ).date(),
+    datetime.datetime(2022, 11, 25, tzinfo=TZ).date(),
+    datetime.datetime(2022, 12, 26, tzinfo=TZ).date()
+]
+EQUITY_EARLY_HOLIDAYS = [
+    datetime.datetime(2022, 2, 8, tzinfo=TZ).date(),
+    datetime.datetime(2022, 11, 25, tzinfo=TZ).date()
+]
 
 
 class Calendar():
@@ -13,9 +30,9 @@ class Calendar():
         # equity market
         if product.attrs['asset_type'] == 'Equity':
             day, date, time = dt.weekday(), dt.date(), dt.time()
-            date_str = date.strftime("%d-%m-%Y")
-            if date_str in EQUITY_HOLIDAYS:
-                if date_str in EQUITY_EARLY_HOLIDAYS and time >= EQUITY_OPEN and time <= EQUITY_EARLY_CLOSE:
+            if date in EQUITY_HOLIDAYS:
+                if date in EQUITY_EARLY_HOLIDAYS and time >= EQUITY_OPEN and time <= EQUITY_EARLY_CLOSE:
+                    print("Hello")
                     return True
                 return False
             if day < 5 and time >= EQUITY_OPEN and time <= EQUITY_CLOSE:
