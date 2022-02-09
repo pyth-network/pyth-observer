@@ -3,7 +3,10 @@ from pyth_observer.events import PriceDeviation
 from pythclient.pythaccounts import PythPriceInfo, PythPriceStatus
 from pyth_observer.prices import Price
 
-def check_price_deviation(publisher_price, publisher_status, aggregate_price, aggregate_status, expected_str):
+
+def check_price_deviation(
+    publisher_price, publisher_status, aggregate_price, aggregate_status, expected_str
+):
     network = "mainnet"
     symbol = "ZZZT"
     publisher_key = "pubkey"
@@ -23,7 +26,7 @@ def check_price_deviation(publisher_price, publisher_status, aggregate_price, ag
         raw_confidence_interval=1,
         price_status=publisher_status,
         slot=1,
-        exponent=-1
+        exponent=-1,
     )
     price.quoter_aggregates[publisher_key] = quoter_aggregate
 
@@ -32,7 +35,7 @@ def check_price_deviation(publisher_price, publisher_status, aggregate_price, ag
         raw_confidence_interval=1,
         price_status=publisher_status,
         slot=1,
-        exponent=-1
+        exponent=-1,
     )
     price.quoters[publisher_key] = quoter_latest
 
@@ -51,6 +54,7 @@ def check_price_deviation(publisher_price, publisher_status, aggregate_price, ag
     else:
         assert result
 
+
 def test_price_deviation():
     trading = PythPriceStatus.TRADING
     unknown = PythPriceStatus.UNKNOWN
@@ -58,7 +62,9 @@ def test_price_deviation():
     check_price_deviation(100, trading, 100, trading, None)
 
     # > 10%
-    check_price_deviation(111, trading, 100, trading, "PUBNAME price is 11% off on ZZZT")
+    check_price_deviation(
+        111, trading, 100, trading, "PUBNAME price is 11% off on ZZZT"
+    )
     check_price_deviation(89, trading, 100, trading, "PUBNAME price is 11% off on ZZZT")
 
     # No event if either status is != trading

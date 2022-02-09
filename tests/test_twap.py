@@ -1,6 +1,11 @@
 import pytest
 from pyth_observer.events import TWAPvsAggregate
-from pythclient.pythaccounts import TwEmaType, PythPriceType, PythPriceInfo, PythPriceStatus
+from pythclient.pythaccounts import (
+    TwEmaType,
+    PythPriceType,
+    PythPriceInfo,
+    PythPriceStatus,
+)
 from typing import List, Dict, Tuple, Optional, Any
 
 
@@ -36,6 +41,7 @@ def check_average(twap, aggregate, exponent, expected_str):
         assert title == expected_str
     else:
         assert result
+
 
 def test_averages():
     # within 10%
