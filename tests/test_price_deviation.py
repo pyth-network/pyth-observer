@@ -1,6 +1,7 @@
 import pytest
-from pyth_observer.events import PriceDeviation
 from pythclient.pythaccounts import PythPriceInfo, PythPriceStatus
+
+from pyth_observer.events import PriceDeviation
 from pyth_observer.prices import Price
 
 

@@ -1,12 +1,14 @@
+from typing import Any, Dict, List, Optional, Tuple
+
 import pytest
-from pyth_observer.events import TWAPvsAggregate
 from pythclient.pythaccounts import (
-    TwEmaType,
-    PythPriceType,
     PythPriceInfo,
     PythPriceStatus,
+    PythPriceType,
+    TwEmaType,
 )
-from typing import List, Dict, Tuple, Optional, Any
+
+from pyth_observer.events import TWAPvsAggregate
 
 
 class MockPriceAccount:

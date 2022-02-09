@@ -1,26 +1,12 @@
-from datetime import datetime, timedelta
 from collections import defaultdict
-from typing import List, Dict, Optional
+from datetime import datetime, timedelta
+from typing import Dict, List, Optional
 
 from loguru import logger
+from pythclient.pythaccounts import PythPriceAccount, PythPriceInfo, PythPriceStatus
 
-
-from pythclient.pythaccounts import (
-    PythPriceAccount,
-    PythPriceStatus,
-    PythPriceInfo,
-)
-
-from .notification import (
-    SlackNotification,
-    LoggerNotification,
-)
-
-from .events import (
-    ValidationEvent,
-    price_validators,
-    price_account_validators,
-)
+from .events import ValidationEvent, price_account_validators, price_validators
+from .notification import LoggerNotification, SlackNotification
 
 logger.enable("pythclient")
 

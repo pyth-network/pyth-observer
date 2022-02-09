@@ -1,9 +1,8 @@
-import os
 import datetime
-from typing import Tuple, List, Optional
+import os
+from typing import List, Optional, Tuple
 
-from pythclient.pythaccounts import TwEmaType, PythPriceAccount
-
+from pythclient.pythaccounts import PythPriceAccount, TwEmaType
 
 # The validators for Prices
 price_validators = []
