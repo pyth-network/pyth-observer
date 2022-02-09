@@ -194,7 +194,9 @@ class PriceDeviation(PriceValidationEvent):
     def is_valid(self) -> bool:
         delta = self.publisher_aggregate.price - self.price.aggregate.price
         if self.price.aggregate.price == 0:
-            return False
+            # TODO: add another alert that validates whether the aggregate price is close to the truth
+            return True
+
         self.deviation = abs(delta / self.price.aggregate.price) * 100
 
         if (self.price.is_publishing(self.publisher_key) and
@@ -241,7 +243,6 @@ class StoppedPublishing(PriceValidationEvent):
             f"Published last slot: {self.publisher_latest.slot}"
         )
         return title, details
-
 
 # Price Account events
 
