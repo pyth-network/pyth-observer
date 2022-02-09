@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 import datetime
 
-import pytz
 import aiohttp
-
+import pytz
 from loguru import logger
 
 

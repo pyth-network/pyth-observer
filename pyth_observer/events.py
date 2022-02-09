@@ -1,9 +1,8 @@
-import os
 import datetime
-from typing import Tuple, List, Optional
+import os
+from typing import List, Optional, Tuple
 
-from pythclient.pythaccounts import TwEmaType, PythPriceAccount
-
+from pythclient.pythaccounts import TwEmaType
 
 # The validators for Prices
 price_validators = []
@@ -100,7 +99,7 @@ class PriceAccountValidationEvent(ValidationEvent, metaclass=RegisterValidator):
         """
         For converting raw_* to the more human friendly versions
         """
-        return num * (10 ** exponent)
+        return num * (10**exponent)
 
 
 class BadConfidence(PriceValidationEvent):
@@ -147,9 +146,11 @@ class ImprobableAggregate(PriceValidationEvent):
         # The normalized confidence
         self.confidence = abs(delta / self.publisher_aggregate.confidence_interval)
 
-        if (self.price.is_publishing(self.publisher_key) and
-                self.price.is_aggregate_publishing() and
-                self.confidence > self.threshold):
+        if (
+            self.price.is_publishing(self.publisher_key)
+            and self.price.is_aggregate_publishing()
+            and self.confidence > self.threshold
+        ):
             return False
         return True
 
@@ -191,9 +192,11 @@ class PriceDeviation(PriceValidationEvent):
 
         self.deviation = abs(delta / self.price.aggregate.price) * 100
 
-        if (self.price.is_publishing(self.publisher_key) and
-                self.price.is_aggregate_publishing() and
-                self.deviation > self.threshold):
+        if (
+            self.price.is_publishing(self.publisher_key)
+            and self.price.is_aggregate_publishing()
+            and self.deviation > self.threshold
+        ):
             return False
         return True
 
@@ -213,6 +216,7 @@ class StoppedPublishing(PriceValidationEvent):
     When a price has stopped being published for at least 600 slots but
     less than 1000 slots.
     """
+
     error_code: str = "stop-publishing-about-5-mins"
     threshold_min = int(os.environ.get("PYTH_OBSERVER_STOP_PUBLISHING_MIN_SLOTS", 600))
     threshold_max = int(os.environ.get("PYTH_OBSERVER_STOP_PUBLISHING_MAX_SLOTS", 1000))
@@ -224,7 +228,10 @@ class StoppedPublishing(PriceValidationEvent):
         # >= 600 && < 1000 is bad
         self.stopped_slots = aggregate - published
 
-        if self.stopped_slots >= self.threshold_min and self.stopped_slots < self.threshold_max:
+        if (
+            self.stopped_slots >= self.threshold_min
+            and self.stopped_slots < self.threshold_max
+        ):
             return False
         return True
 
@@ -288,8 +295,9 @@ class TWAPvsAggregate(PriceAccountValidationEvent):
     When the TWAP and Aggregate are significantly off, it is due to
     something wonky or big price moves.
     """
+
     error_code: str = "twap-vs-aggregate-price"
-    threshold = int(os.environ.get('PYTH_OBSERVER_TWAP_VS_AGGREGATE_THRESHOLD', 10))
+    threshold = int(os.environ.get("PYTH_OBSERVER_TWAP_VS_AGGREGATE_THRESHOLD", 10))
 
     def is_valid(self) -> bool:
         self.twap = self.convert_raw(
@@ -301,7 +309,7 @@ class TWAPvsAggregate(PriceAccountValidationEvent):
         try:
             self.deviation = 100 * abs(self.twap - aggregate_price) / aggregate_price
         # When a publisher publishes garbage data this has happened before
-        except ZeroDivisionError as exc:
+        except ZeroDivisionError:
             return True
 
         if self.deviation > self.threshold:

@@ -1,0 +1,21 @@
+name: Setup Python
+
+inputs:
+  python-version:
+    required: false
+    default: "3.8"
+  poetry-version:
+    required: false
+    default: "1.1.12"
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-python@v2
+      with:
+        python-version: ${{ inputs.python-version }}
+    - uses: abatilo/actions-poetry@v2.0.0
+      with:
+        poetry-version: ${{ inputs.poetry-version }}
+    - run: poetry install
+      shell: sh

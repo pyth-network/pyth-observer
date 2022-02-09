@@ -1,26 +1,12 @@
-from datetime import datetime, timedelta
 from collections import defaultdict
-from typing import List, Dict, Optional
+from datetime import datetime, timedelta
+from typing import Dict, List, Optional
 
 from loguru import logger
+from pythclient.pythaccounts import PythPriceAccount, PythPriceInfo, PythPriceStatus
 
-
-from pythclient.pythaccounts import (
-    PythPriceAccount,
-    PythPriceStatus,
-    PythPriceInfo,
-)
-
-from .notification import (
-    SlackNotification,
-    LoggerNotification,
-)
-
-from .events import (
-    ValidationEvent,
-    price_validators,
-    price_account_validators,
-)
+from .events import ValidationEvent, price_account_validators, price_validators
+from .notification import LoggerNotification, SlackNotification
 
 logger.enable("pythclient")
 
@@ -116,9 +102,11 @@ class PriceValidator:
                 "skipped": 0,
             }
 
-        self.events[event.unique_id].update({
-            'instance': event,
-        })
+        self.events[event.unique_id].update(
+            {
+                "instance": event,
+            }
+        )
 
     def verify_price_account(
         self, price_account: PythPriceAccount
@@ -187,7 +175,7 @@ class PriceValidator:
         for event in events:
             event_data = self.events[event.unique_id]
             snooze = kwargs.get("notification_mins", 0)
-            last_notified = event_data.get('last_notified')
+            last_notified = event_data.get("last_notified")
 
             # If a notification has been sent in the past, check if this
             # notification should be skipped or not.
@@ -206,8 +194,10 @@ class PriceValidator:
                     continue
 
             # Set the last notification time and reset the skipped counter
-            self.events[event.unique_id].update({
-                "skipped": 0,
-                "last_notified": datetime.now(),
-            })
+            self.events[event.unique_id].update(
+                {
+                    "skipped": 0,
+                    "last_notified": datetime.now(),
+                }
+            )
             await notifier.notify(event)
