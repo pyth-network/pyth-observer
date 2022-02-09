@@ -2,7 +2,7 @@ import datetime
 import os
 from typing import List, Optional, Tuple
 
-from pythclient.pythaccounts import PythPriceAccount, TwEmaType
+from pythclient.pythaccounts import TwEmaType
 
 # The validators for Prices
 price_validators = []
@@ -239,6 +239,8 @@ class StoppedPublishing(PriceValidationEvent):
             f"Published last slot: {self.publisher_latest.slot}"
         )
 
+        return title, details
+
 
 # Price Account events
 
@@ -304,7 +306,7 @@ class TWAPvsAggregate(PriceAccountValidationEvent):
         try:
             self.deviation = 100 * abs(self.twap - aggregate_price) / aggregate_price
         # When a publisher publishes garbage data this has happened before
-        except ZeroDivisionError as exc:
+        except ZeroDivisionError:
             return True
 
         if self.deviation > self.threshold:

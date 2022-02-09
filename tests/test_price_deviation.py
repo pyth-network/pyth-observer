@@ -1,4 +1,3 @@
-import pytest
 from pythclient.pythaccounts import PythPriceInfo, PythPriceStatus
 
 from pyth_observer.events import PriceDeviation

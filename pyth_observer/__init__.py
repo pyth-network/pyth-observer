@@ -9,7 +9,9 @@ from pythclient.solana import (
     SOLANA_TESTNET_WS_ENDPOINT,
 )
 
-from .dns import get_key  # noqa
+from .dns import get_key
+
+assert get_key  # Silence warnings about the above import being unused
 
 
 def get_solana_urls(network) -> Tuple[str, str]:

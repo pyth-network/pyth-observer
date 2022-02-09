@@ -1,6 +1,5 @@
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Dict
 
-import pytest
 from pythclient.pythaccounts import (
     PythPriceInfo,
     PythPriceStatus,
