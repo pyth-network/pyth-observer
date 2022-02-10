@@ -4,3 +4,5 @@ venv
 pyth-client-py
 publishers.json
 **/__pycache__
+
+.DS_Store
