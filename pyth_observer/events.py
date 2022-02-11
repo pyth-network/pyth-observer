@@ -120,7 +120,7 @@ class BadConfidence(PriceValidationEvent):
     error_code: str = "bad-confidence"
 
     def is_valid(self):
-        if self.publisher_aggregate.confidence_interval <= 0:
+        if self.publisher_aggregate.confidence_interval <= 0 and self.publisher_aggregate.price_status == PythPriceStatus.TRADING:
             return False
         return True
 
@@ -133,6 +133,12 @@ class BadConfidence(PriceValidationEvent):
             f"Status: {self.publisher_aggregate.price_status.name}",
         ]
         return title, details
+
+    def is_noisy(self) -> bool:
+        """
+        This event can be very noisy due to publishers using less than or equal to zero confidence interval
+        """
+        return True
 
 
 class ImprobableAggregate(PriceValidationEvent):
@@ -152,13 +158,14 @@ class ImprobableAggregate(PriceValidationEvent):
     def is_valid(self) -> bool:
         delta = self.publisher_aggregate.price - self.price.aggregate.price
 
-        # The normalized confidence
-        self.confidence = abs(delta / self.publisher_aggregate.confidence_interval)
+        if self.publisher_aggregate.confidence_interval != 0:
+            # The normalized confidence
+            self.confidence = abs(delta / self.publisher_aggregate.confidence_interval)
 
-        if (self.price.is_publishing(self.publisher_key) and
-                self.price.is_aggregate_publishing() and
-                self.confidence > self.threshold):
-            return False
+            if (self.price.is_publishing(self.publisher_key) and
+                    self.price.is_aggregate_publishing() and
+                    self.confidence > self.threshold):
+                return False
         return True
 
     def is_noisy(self) -> bool:
@@ -244,6 +251,39 @@ class StoppedPublishing(PriceValidationEvent):
         )
         return title, details
 
+
+class PublisherPriceFeedOffline(PriceValidationEvent):
+    """
+    This alert is supposed to fire when a publisher price feed should be updating, but isn't. It alerts when a publisher price hasn't updated its price in > 25 slots OR its status is unknown.
+    """
+    error_code: str = "publisher-price-feed-offline"
+
+    def is_valid(self) -> bool:
+        self.slot_diff = self.price.slot - self.publisher_latest.slot
+
+        if self.slot_diff > MAX_SLOT_DIFFERENCE or self.publisher_latest.price_status != PythPriceStatus.TRADING:
+            market_open = calendar.is_market_open(
+                self.price.product_attrs['asset_type'], datetime.datetime.now(tz=TZ))
+            if market_open:
+                return False
+        return True
+
+    def get_event_details(self) -> Tuple[str, List[str]]:
+        title = f"{self.publisher_key} {self.symbol} price feed is offline (has not updated its price in > 25 slots OR status is unknown)"
+        details = [
+            f"Last Updated Slot: {self.publisher_latest.slot}",
+            f"Current Slot: {self.price.slot}",
+            f"Status: {self.publisher_latest.price_status}"
+        ]
+        return title, details
+
+    def is_noisy(self) -> bool:
+        """
+        This event can be very noisy due to publishers going offline on each price feeds
+        """
+        return True
+
+
 # Price Account events
 
 
@@ -257,7 +297,8 @@ class PriceFeedOffline(PriceAccountValidationEvent):
         self.slot_diff = self.price_account.slot - self.price_account.aggregate_price_info.slot
 
         if self.slot_diff > MAX_SLOT_DIFFERENCE or self.price_account.aggregate_price_info.price_status != PythPriceStatus.TRADING:
-            market_open = calendar.is_market_open(self.price_account.product, datetime.datetime.now(tz=TZ))
+            market_open = calendar.is_market_open(
+                self.price_account.product.attrs['asset_type'], datetime.datetime.now(tz=TZ))
             if market_open:
                 return False
         return True

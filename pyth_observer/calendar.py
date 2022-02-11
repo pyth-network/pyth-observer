@@ -25,9 +25,9 @@ EQUITY_EARLY_HOLIDAYS = [
 
 
 class HolidayCalendar():
-    def is_market_open(self, product, dt):
+    def is_market_open(self, asset_type, dt):
         # equity market
-        if product.attrs['asset_type'] == 'Equity':
+        if asset_type == 'Equity':
             day, date, time = dt.weekday(), dt.date(), dt.time()
             if date in EQUITY_HOLIDAYS or date in EQUITY_EARLY_HOLIDAYS:
                 if date in EQUITY_EARLY_HOLIDAYS and time >= EQUITY_OPEN and time <= EQUITY_EARLY_CLOSE:
