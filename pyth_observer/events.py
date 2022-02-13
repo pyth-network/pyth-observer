@@ -134,12 +134,6 @@ class BadConfidence(PriceValidationEvent):
         ]
         return title, details
 
-    def is_noisy(self) -> bool:
-        """
-        This event can be very noisy due to publishers using less than or equal to zero confidence interval
-        """
-        return True
-
 
 class ImprobableAggregate(PriceValidationEvent):
     """
