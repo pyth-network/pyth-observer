@@ -33,20 +33,20 @@ def check_price_offline(current_slot, aggregate_price_info_slot, aggregate_price
         assert result
 
 
-def test_averages():
+def test_price_offline():
     trading = PythPriceStatus.TRADING
     unknown = PythPriceStatus.UNKNOWN
 
     product_attrs = {'asset_type': 'Crypto', 'symbol': 'Crypto.BCH/USD', 'quote_currency': 'USD',
                      'description': 'BCH/USD', 'generic_symbol': 'BCHUSD', 'base': 'BCH'}
 
-    # publisher slot > 25 behind current latest slot
+    # aggregate slot > 25 behind current latest slot
     check_price_offline(27, 1, trading, product_attrs,
                         "ZZZT price feed is offline (has not updated its price in > 25 slots OR status is unknown)")
 
-    # publisher trading status is != trading
+    # aggregate trading status is != trading
     check_price_offline(1, 1, unknown, product_attrs,
                         "ZZZT price feed is offline (has not updated its price in > 25 slots OR status is unknown)")
 
-    # no event if publisher slot is <= 25 current latest slot and status is trading
+    # no event if aggregate slot is <= 25 current latest slot and status is trading
     check_price_offline(1, 1, trading, product_attrs, None)
