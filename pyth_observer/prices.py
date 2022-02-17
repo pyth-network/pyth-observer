@@ -158,9 +158,7 @@ class PriceValidator:
             if self.publisher_key is not None and publisher_key != self.publisher_key:
                 continue
 
-            is_active = price.is_publishing(publisher_key)
-
-            if is_active and publisher_key in price.quoter_aggregates:
+            if publisher_key in price.quoter_aggregates:
                 for price_validator in price_validators:
                     check = price_validator(
                         publisher_key=publisher_key,
