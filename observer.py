@@ -13,13 +13,11 @@ from pythclient.pythclient import PythClient
 from pythclient.ratelimit import RateLimit
 
 from pyth_observer import get_key, get_solana_urls
-from pyth_observer.coingecko import get_coingecko_prices, get_coingecko_symbol_to_id_mapping
+from pyth_observer.coingecko import get_coingecko_api_id, get_coingecko_prices
 from pyth_observer.prices import Price, PriceValidator
 
 logger.enable("pythclient")
 RateLimit.configure_default_ratelimit(overall_cps=5, method_cps=3, connection_cps=3)
-
-coingecko_symbol_to_id_mapping = get_coingecko_symbol_to_id_mapping()
 
 
 def get_publishers(network):
@@ -68,13 +66,13 @@ async def main(args):
                 asyncio.sleep(0.4)
                 continue
 
-            crypto_products = set([p.attrs['base'] for p in products if p.attrs["asset_type"] == 'Crypto'])
-            coingecko_prices = get_coingecko_prices(coingecko_symbol_to_id_mapping, crypto_products)
+            crypto_products = set([p.attrs["base"] for p in products if p.attrs["asset_type"] == 'Crypto'])
+            coingecko_prices = get_coingecko_prices(crypto_products)
 
             for product in products:
                 errors = []
                 symbol = product.symbol
-                coingecko_price = coingecko_prices.get(coingecko_symbol_to_id_mapping.get(product.attrs['base']))
+                coingecko_price = coingecko_prices.get(get_coingecko_api_id(product.attrs['base']))
 
                 if symbol not in validators:
                     # TODO: If publisher_key is not None, then only do validation for that publisher
@@ -129,7 +127,7 @@ async def main(args):
                     slack_webhook_url=args.slack_webhook_url,
                     notification_mins=args.notification_snooze_mins,
                 )
-            await asyncio.sleep(0.4)
+            await asyncio.sleep(30)
 
 
 if __name__ == "__main__":

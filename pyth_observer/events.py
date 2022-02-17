@@ -6,6 +6,7 @@ from typing import Tuple, List, Optional
 from pythclient.pythaccounts import TwEmaType, PythPriceStatus
 
 from pyth_observer.calendar import HolidayCalendar
+from pyth_observer.coingecko import get_coingecko_market_id
 
 
 # The validators for Prices
@@ -378,6 +379,7 @@ class PriceDeviationCoinGecko(PriceAccountValidationEvent):
         details = [
             f"Pyth Price: {self.price_account.aggregate_price_info.price}",
             f"CoinGecko Price: {self.coingecko_price['usd']}",
-            f"Deviation: {self.coingecko_deviation}% off"
+            f"Deviation: {self.coingecko_deviation}% off",
+            f"CoinGecko Price Chart: https://www.coingecko.com/en/coins/{get_coingecko_market_id(self.price_account.product.attrs['base'])}"
         ]
         return title, details

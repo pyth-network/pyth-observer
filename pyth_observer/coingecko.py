@@ -1,16 +1,10 @@
 import json
-import requests
 import os
-
-from ratelimit import limits, RateLimitException, sleep_and_retry
 
 from pycoingecko import CoinGeckoAPI
 
 
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
-
-ONE_MINUTE = 60
-MAX_CALLS_PER_MINUTE = 50
 
 cg = CoinGeckoAPI()
 
@@ -22,9 +16,18 @@ def get_coingecko_symbol_to_id_mapping():
     return data
 
 
-@sleep_and_retry
-@limits(calls=MAX_CALLS_PER_MINUTE, period=ONE_MINUTE)
-def get_coingecko_prices(mapping, symbols):
-    ids = [mapping[x] for x in mapping if x in symbols]
+mapping = get_coingecko_symbol_to_id_mapping()
+
+
+def get_coingecko_prices(symbols):
+    ids = [mapping[x]["api"] for x in mapping if x in symbols]
     prices = cg.get_price(ids=ids, vs_currencies='usd')
     return prices
+
+
+def get_coingecko_api_id(symbol):
+    return mapping[symbol]['api'] if symbol in mapping else None
+
+
+def get_coingecko_market_id(symbol):
+    return mapping[symbol]['market'] if symbol in mapping else None
