@@ -127,7 +127,7 @@ async def main(args):
                     slack_webhook_url=args.slack_webhook_url,
                     notification_mins=args.notification_snooze_mins,
                 )
-            await asyncio.sleep(30)
+            await asyncio.sleep(0.4)
 
 
 if __name__ == "__main__":
