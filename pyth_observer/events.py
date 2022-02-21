@@ -404,6 +404,7 @@ class PriceDeviationCoinGecko(PriceAccountValidationEvent):
     def is_valid(self) -> bool:
         pyth_price = self.price_account.aggregate_price_info.price
         if self.coingecko_price is None or pyth_price == 0:
+            # TODO: add another alert that checks if coingecko is down
             return True
 
         self.coingecko_deviation = (
