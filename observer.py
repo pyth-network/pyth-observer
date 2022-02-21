@@ -19,11 +19,6 @@ from pyth_observer.prices import Price, PriceValidator
 logger.enable("pythclient")
 RateLimit.configure_default_ratelimit(overall_cps=5, method_cps=3, connection_cps=3)
 
-coingecko_prices = {}
-gprice = Gauge(
-    "crypto_price", "Price", labelnames=["symbol", "publisher", "status"]
-)
-
 
 def get_publishers(network):
     """
@@ -44,6 +39,10 @@ async def main(args):
     http_url, ws_url = get_solana_urls(network=args.network)
 
     publishers = get_publishers(args.network)
+    coingecko_prices = {}
+    gprice = Gauge(
+        "crypto_price", "Price", labelnames=["symbol", "publisher", "status"]
+    )
 
     async def run_alerts():
         async with PythClient(
@@ -133,7 +132,7 @@ async def main(args):
                 await asyncio.sleep(0.4)
 
     async def run_coingecko_get_price():
-        global coingecko_prices
+        nonlocal coingecko_prices
         while True:
             coingecko_prices = get_coingecko_prices([x for x in symbol_to_id_mapping])
             await asyncio.sleep(2)
