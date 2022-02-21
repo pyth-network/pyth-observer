@@ -13,7 +13,7 @@ from pythclient.pythclient import PythClient
 from pythclient.ratelimit import RateLimit
 
 from pyth_observer import get_key, get_solana_urls
-from pyth_observer.coingecko import get_coingecko_api_id, get_coingecko_prices, mapping
+from pyth_observer.coingecko import get_coingecko_prices, symbol_to_id_mapping
 from pyth_observer.prices import Price, PriceValidator
 
 logger.enable("pythclient")
@@ -75,7 +75,7 @@ async def main(args):
                 for product in products:
                     errors = []
                     symbol = product.symbol
-                    coingecko_price = coingecko_prices.get(get_coingecko_api_id(product.attrs['base']))
+                    coingecko_price = coingecko_prices.get(product.attrs['base'])
 
                     if symbol not in validators:
                         # TODO: If publisher_key is not None, then only do validation for that publisher
@@ -135,7 +135,7 @@ async def main(args):
     async def run_coingecko_get_price():
         global coingecko_prices
         while True:
-            coingecko_prices = get_coingecko_prices([x for x in mapping])
+            coingecko_prices = get_coingecko_prices([x for x in symbol_to_id_mapping])
             await asyncio.sleep(2)
 
     await asyncio.gather(run_alerts(), run_coingecko_get_price())
