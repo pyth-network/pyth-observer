@@ -376,7 +376,7 @@ class TWAPvsAggregate(PriceAccountValidationEvent):
         try:
             self.deviation = 100 * abs(self.twap - aggregate_price) / aggregate_price
         # When a publisher publishes garbage data this has happened before
-        except ZeroDivisionError as exc:
+        except ZeroDivisionError:
             return True
 
         if self.deviation > self.threshold:
