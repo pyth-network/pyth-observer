@@ -11,6 +11,8 @@ from pythclient.pythaccounts import (
     PythPriceInfo,
 )
 
+from pyth_observer import coingecko
+
 from .notification import (
     SlackNotification,
     LoggerNotification,
@@ -93,12 +95,14 @@ class PriceValidator:
         key: Optional[str] = None,
         network: Optional[str] = None,
         symbol: Optional[str] = None,
+        coingecko_price: Optional[Dict] = None,
     ):
         self.publisher_key = key
         self.symbol = symbol
         self.network = network
         self.last_updated_slot: Optional[int] = None
         self.events = defaultdict(dict)
+        self.coingecko_price = coingecko_price
 
     def update_slot(self, slot: Optional[int]) -> None:
         """
@@ -132,6 +136,7 @@ class PriceValidator:
                 price_account=price_account,
                 network=self.network,
                 symbol=self.symbol,
+                coingecko_price=self.coingecko_price,
             )
             if check.is_valid() is False:
                 self.update_events(check)

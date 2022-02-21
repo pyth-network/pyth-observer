@@ -6,6 +6,7 @@ from typing import Tuple, List, Optional
 from pythclient.pythaccounts import TwEmaType, PythPriceStatus
 
 from pyth_observer.calendar import HolidayCalendar
+from pyth_observer.coingecko import get_coingecko_market_id
 
 
 # The validators for Prices
@@ -52,12 +53,14 @@ class ValidationEvent:
         price_account=None,
         network=None,
         symbol=None,
+        coingecko_price=None,
     ) -> None:
         self.price = price
         self.symbol = symbol
         self.network = network
         self.price_account = price_account
         self.publisher_key = publisher_key
+        self.coingecko_price = coingecko_price
         self.creation_time = datetime.datetime.now()
 
         if publisher_key:
@@ -133,6 +136,12 @@ class BadConfidence(PriceValidationEvent):
             f"Status: {self.publisher_aggregate.price_status.name}",
         ]
         return title, details
+
+    def is_noisy(self) -> bool:
+        """
+        This event can be very noisy due to publishers using less than or equal to zero confidence interval
+        """
+        return True
 
 
 class ImprobableAggregate(PriceValidationEvent):
@@ -367,7 +376,7 @@ class TWAPvsAggregate(PriceAccountValidationEvent):
         try:
             self.deviation = 100 * abs(self.twap - aggregate_price) / aggregate_price
         # When a publisher publishes garbage data this has happened before
-        except ZeroDivisionError as exc:
+        except ZeroDivisionError:
             return True
 
         if self.deviation > self.threshold:
@@ -381,5 +390,37 @@ class TWAPvsAggregate(PriceAccountValidationEvent):
         details = [
             f"TWAP: {self.twap:.2f} (slot {self.price_account.slot})",
             f"Aggregate: {agg_price:.3f} (slot {self.price_account.aggregate_price_info.slot})",
+        ]
+        return title, details
+
+
+class PriceDeviationCoinGecko(PriceAccountValidationEvent):
+    """
+    This alert is supposed to fire when a price feed deviates from CoinGecko price feed by a specified threshold.
+    """
+    error_code: str = "price-deviation-coingecko"
+    threshold = int(os.environ.get('PYTH_OBSERVER_PRICE_DEVIATION_COINGECKO', 5))
+
+    def is_valid(self) -> bool:
+        pyth_price = self.price_account.aggregate_price_info.price
+        if self.coingecko_price is None or pyth_price == 0:
+            # TODO: add another alert that checks if coingecko is down
+            return True
+
+        self.coingecko_deviation = (
+            abs(pyth_price - self.coingecko_price['usd']) / self.coingecko_price['usd']) * 100.0
+
+        # Pyth price is more than a specified threshold percentage off CoinGecko's price
+        if self.coingecko_deviation > self.threshold:
+            return False
+        return True
+
+    def get_event_details(self) -> Tuple[str, List[str]]:
+        title = f"{self.symbol} is more than {self.threshold}% off from CoinGecko"
+        details = [
+            f"Pyth Price: {self.price_account.aggregate_price_info.price}",
+            f"CoinGecko Price: {self.coingecko_price['usd']}",
+            f"Deviation: {self.coingecko_deviation}% off",
+            f"CoinGecko Price Chart: https://www.coingecko.com/en/coins/{get_coingecko_market_id(self.price_account.product.attrs['base'])}"
         ]
         return title, details

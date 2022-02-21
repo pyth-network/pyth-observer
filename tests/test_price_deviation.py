@@ -1,7 +1,7 @@
-import pytest
 from pyth_observer.events import PriceDeviation
 from pythclient.pythaccounts import PythPriceInfo, PythPriceStatus
 from pyth_observer.prices import Price
+
 
 def check_price_deviation(publisher_price, publisher_status, aggregate_price, aggregate_status, expected_str):
     network = "mainnet"
@@ -50,6 +50,7 @@ def check_price_deviation(publisher_price, publisher_status, aggregate_price, ag
         assert title == expected_str
     else:
         assert result
+
 
 def test_price_deviation():
     trading = PythPriceStatus.TRADING

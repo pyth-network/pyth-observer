@@ -13,6 +13,7 @@ from pythclient.pythclient import PythClient
 from pythclient.ratelimit import RateLimit
 
 from pyth_observer import get_key, get_solana_urls
+from pyth_observer.coingecko import get_coingecko_prices, symbol_to_id_mapping
 from pyth_observer.prices import Price, PriceValidator
 
 logger.enable("pythclient")
@@ -38,90 +39,105 @@ async def main(args):
     http_url, ws_url = get_solana_urls(network=args.network)
 
     publishers = get_publishers(args.network)
+    coingecko_prices = {}
+    gprice = Gauge(
+        "crypto_price", "Price", labelnames=["symbol", "publisher", "status"]
+    )
 
-    async with PythClient(
-        solana_endpoint=http_url,
-        solana_ws_endpoint=ws_url,
-        first_mapping_account_key=mapping_key,
-        program_key=program_key if args.use_program_accounts else None,
-    ) as c:
+    async def run_alerts():
+        async with PythClient(
+            solana_endpoint=http_url,
+            solana_ws_endpoint=ws_url,
+            first_mapping_account_key=mapping_key,
+            program_key=program_key if args.use_program_accounts else None,
+        ) as c:
 
-        validators = {}
+            validators = {}
 
-        logger.info("Starting pyth-observer against {}: {}", args.network, http_url)
+            logger.info("Starting pyth-observer against {}: {}", args.network, http_url)
+            while True:
+                try:
+                    await c.refresh_all_prices()
+                except (ClientConnectorError, SolanaException) as exc:
+                    logger.error("{} refreshing prices: {}", exc.__class__.__name__, exc)
+                    asyncio.sleep(0.4)
+                    continue
+
+                logger.trace("Updating product listing")
+                try:
+                    products = await c.get_products()
+                except (ClientConnectorError, SolanaException) as exc:
+                    logger.error("{} refreshing prices: {}", exc.__class__.__name__, exc)
+                    asyncio.sleep(0.4)
+                    continue
+
+                for product in products:
+                    errors = []
+                    symbol = product.symbol
+                    coingecko_price = coingecko_prices.get(product.attrs['base'])
+
+                    if symbol not in validators:
+                        # TODO: If publisher_key is not None, then only do validation for that publisher
+                        validators[symbol] = PriceValidator(
+                            key=args.publisher_key,
+                            network=args.network,
+                            symbol=symbol,
+                            coingecko_price=coingecko_price
+                        )
+
+                    prices = await product.get_prices()
+
+                    for _, price_account in prices.items():
+                        price = Price(
+                            slot=price_account.slot,
+                            aggregate=price_account.aggregate_price_info,
+                            product_attrs=product.attrs,
+                            publishers=publishers,
+                        )
+                        price_account_errors = validators[symbol].verify_price_account(
+                            price_account=price_account,
+                        )
+                        if price_account_errors:
+                            errors.extend(price_account_errors)
+
+                        for price_comp in price_account.price_components:
+                            # The PythPublisherKey
+                            publisher = price_comp.publisher_key.key
+
+                            price.quoters[publisher] = price_comp.latest_price_info
+                            price.quoter_aggregates[
+                                publisher
+                            ] = price_comp.last_aggregate_price_info
+
+                            if args.enable_prometheus:
+                                gprice.labels(
+                                    symbol=symbol,
+                                    publisher=publisher,
+                                    status=price.quoters[publisher].price_status.name,
+                                ).set(price.quoters[publisher].price)
+
+                        # Where the magic happens!
+                        price_errors = validators[symbol].verify_price(
+                            price=price, include_noisy=args.include_noisy_alerts
+                        )
+                        if price_errors:
+                            errors.extend(price_errors)
+
+                    # Send all notifications for a given symbol pair
+                    await validators[symbol].notify(
+                        errors,
+                        slack_webhook_url=args.slack_webhook_url,
+                        notification_mins=args.notification_snooze_mins,
+                    )
+                await asyncio.sleep(0.4)
+
+    async def run_coingecko_get_price():
+        nonlocal coingecko_prices
         while True:
-            try:
-                await c.refresh_all_prices()
-            except (ClientConnectorError, SolanaException) as exc:
-                logger.error("{} refreshing prices: {}", exc.__class__.__name__, exc)
-                asyncio.sleep(0.4)
-                continue
+            coingecko_prices = get_coingecko_prices([x for x in symbol_to_id_mapping])
+            await asyncio.sleep(2)
 
-            logger.trace("Updating product listing")
-            try:
-                products = await c.get_products()
-            except (ClientConnectorError, SolanaException) as exc:
-                logger.error("{} refreshing prices: {}", exc.__class__.__name__, exc)
-                asyncio.sleep(0.4)
-                continue
-
-            for product in products:
-                errors = []
-                symbol = product.symbol
-
-                if symbol not in validators:
-                    # TODO: If publisher_key is not None, then only do validation for that publisher
-                    validators[symbol] = PriceValidator(
-                        key=args.publisher_key,
-                        network=args.network,
-                        symbol=symbol,
-                    )
-
-                prices = await product.get_prices()
-
-                for _, price_account in prices.items():
-                    price = Price(
-                        slot=price_account.slot,
-                        aggregate=price_account.aggregate_price_info,
-                        product_attrs=product.attrs,
-                        publishers=publishers,
-                    )
-                    price_account_errors = validators[symbol].verify_price_account(
-                        price_account=price_account,
-                    )
-                    if price_account_errors:
-                        errors.extend(price_account_errors)
-
-                    for price_comp in price_account.price_components:
-                        # The PythPublisherKey
-                        publisher = price_comp.publisher_key.key
-
-                        price.quoters[publisher] = price_comp.latest_price_info
-                        price.quoter_aggregates[
-                            publisher
-                        ] = price_comp.last_aggregate_price_info
-
-                        if args.enable_prometheus:
-                            gprice.labels(
-                                symbol=symbol,
-                                publisher=publisher,
-                                status=price.quoters[publisher].price_status.name,
-                            ).set(price.quoters[publisher].price)
-
-                    # Where the magic happens!
-                    price_errors = validators[symbol].verify_price(
-                        price=price, include_noisy=args.include_noisy_alerts
-                    )
-                    if price_errors:
-                        errors.extend(price_errors)
-
-                # Send all notifications for a given symbol pair
-                await validators[symbol].notify(
-                    errors,
-                    slack_webhook_url=args.slack_webhook_url,
-                    notification_mins=args.notification_snooze_mins,
-                )
-            await asyncio.sleep(0.4)
+    await asyncio.gather(run_alerts(), run_coingecko_get_price())
 
 
 if __name__ == "__main__":
@@ -194,9 +210,6 @@ if __name__ == "__main__":
         if args.enable_prometheus:
             logger.info(f"Starting Prometheus Exporter on port {args.prometheus_port}")
             start_http_server(port=args.prometheus_port)
-            gprice = Gauge(
-                "crypto_price", "Price", labelnames=["symbol", "publisher", "status"]
-            )
         asyncio.run(main(args=args))
     except KeyboardInterrupt:
         logger.info("Exiting on CTRL-c")

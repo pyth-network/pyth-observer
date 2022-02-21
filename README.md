@@ -27,13 +27,14 @@ Run the unit tests by running `pytest` from the repository root.
 
 ## Environment Variables
 
-| **Name**                                    | **Default** | **Description**                                      |
-| ------------------------------------------- | ----------- | ---------------------------------------------------- |
-| `PYTH_OBSERVER_SLACK_WEBHOOK_URL`           | None        | URL of the Slack incoming webhook for notifications  |
-| `PYTH_OBSERVER_PRICE_DEVIATION_THRESHOLD`   | 6           | Percentage between the published price and aggregate |
-| `PYTH_OBSERVER_TWAP_VS_AGGREGATE_THRESHOLD` | 10          | Max TWAP and Aggregate prices should be apart        |
-| `PYTH_OBSERVER_STOP_PUBLISHING_MIN_SLOTS`   | 600         | Min slots before stop-publishing alert fires         |
-| `PYTH_OBSERVER_STOP_PUBLISHING_MAX_SLOTS`   | 1000        | Max slots behind a stop-publishing alert fires on    |
+| **Name**                                    | **Default** | **Description**                                        |
+| ------------------------------------------- | ----------- | ------------------------------------------------------ |
+| `PYTH_OBSERVER_SLACK_WEBHOOK_URL`           | None        | URL of the Slack incoming webhook for notifications    |
+| `PYTH_OBSERVER_PRICE_DEVIATION_THRESHOLD`   | 6           | Percentage between the published price and aggregate   |
+| `PYTH_OBSERVER_TWAP_VS_AGGREGATE_THRESHOLD` | 10          | Max TWAP and Aggregate prices should be apart          |
+| `PYTH_OBSERVER_STOP_PUBLISHING_MIN_SLOTS`   | 600         | Min slots before stop-publishing alert fires           |
+| `PYTH_OBSERVER_STOP_PUBLISHING_MAX_SLOTS`   | 1000        | Max slots behind a stop-publishing alert fires on      |
+| `PYTH_OBSERVER_PRICE_DEVIATION_COINGECKO`   | 5           | Percentage between aggregate price and CoinGecko price |
 
 ## Running
 

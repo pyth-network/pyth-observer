@@ -1,0 +1,158 @@
+{
+    "BTC": {
+        "api": "bitcoin",
+        "market": "bitcoin"
+    },
+    "ETH": {
+        "api": "ethereum",
+        "market": "ethereum"
+    },
+    "LUNA": {
+        "api": "terra-luna",
+        "market": "terra-luna"
+    },
+    "BNB": {
+        "api": "binancecoin",
+        "market": "bnb"
+    },
+    "ADA": {
+        "api": "cardano",
+        "market": "cardano"
+    },
+    "RAY": {
+        "api": "raydium",
+        "market": "raydium"
+    },
+    "SOL": {
+        "api": "solana",
+        "market": "solana"
+    },
+    "DOT": {
+        "api": "polkadot",
+        "market": "polkadot"
+    },
+    "DOGE": {
+        "api": "dogecoin",
+        "market": "dogecoin"
+    },
+    "FIDA": {
+        "api": "bonfida",
+        "market": "bonfida"
+    },
+    "FTT": {
+        "api": "ftx-token",
+        "market": "ftx-token"
+    },
+    "HXRO": {
+        "api": "hxro",
+        "market": "hxro"
+    },
+    "FTM": {
+        "api": "fantom",
+        "market": "fantom"
+    },
+    "SRM": {
+        "api": "serum",
+        "market": "serum"
+    },
+    "USDC": {
+        "api": "usd-coin",
+        "market": "usd-coin"
+    },
+    "PORT": {
+        "api": "port-finance",
+        "market": "port-finance"
+    },
+    "ATOM": {
+        "api": "cosmos",
+        "market": "cosmos"
+    },
+    "BCH": {
+        "api": "bitcoin-cash",
+        "market": "bitcoin-cash"
+    },
+    "COPE": {
+        "api": "cope",
+        "market": "cope"
+    },
+    "ORCA": {
+        "api": "orca",
+        "market": "orca"
+    },
+    "ALGO": {
+        "api": "algorand",
+        "market": "algorand"
+    },
+    "SBR": {
+        "api": "saber",
+        "market": "saber"
+    },
+    "SCNSOL": {
+        "api": "socean-staked-sol",
+        "market": "socean-staked-sol"
+    },
+    "MER": {
+        "api": "mercurial",
+        "market": "mercurial"
+    },
+    "USDT": {
+        "api": "tether",
+        "market": "tether"
+    },
+    "JET": {
+        "api": "jet",
+        "market": "jet"
+    },
+    "MIR": {
+        "api": "mirror-protocol",
+        "market": "mirror-protocol"
+    },
+    "AVAX": {
+        "api": "avalanche-2",
+        "market": "avalanche"
+    },
+    "STEP": {
+        "api": "step-finance",
+        "market": "step-finance"
+    },
+    "MATIC": {
+        "api": "matic-network",
+        "market": "polygon"
+    },
+    "MNGO": {
+        "api": "mango-markets",
+        "market": "mango"
+    },
+    "PAI": {
+        "api": "parrot-usd",
+        "market": "parrot-usd"
+    },
+    "SLND": {
+        "api": "solend",
+        "market": "solend"
+    },
+    "ONE": {
+        "api": "harmony",
+        "market": "harmony"
+    },
+    "UST": {
+        "api": "terrausd",
+        "market": "terra-usd"
+    },
+    "LTC": {
+        "api": "litecoin",
+        "market": "litecoin"
+    },
+    "SNY": {
+        "api": "synthetify-token",
+        "market": "synthetify-token"
+    },
+    "STSOL": {
+        "api": "lido-staked-sol",
+        "market": "lido-staked-sol"
+    },
+    "MSOL": {
+        "api": "msol",
+        "market": "marinade-staked-sol"
+    }
+}

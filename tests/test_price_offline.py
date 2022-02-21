@@ -19,7 +19,7 @@ def check_price_offline(current_slot, aggregate_price_info_slot, aggregate_price
     network = "mainnet"
     symbol = "ZZZT"
 
-    t = PriceFeedOffline(None, 0, pa, network, symbol)
+    t = PriceFeedOffline(None, None, pa, network, symbol)
     result = t.is_valid()
 
     if not result:
