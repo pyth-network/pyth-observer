@@ -46,7 +46,6 @@ async def main(args):
     publishers = get_publishers(args.network)
 
     async def run_alerts():
-        global coingecko_prices
         async with PythClient(
             solana_endpoint=http_url,
             solana_ws_endpoint=ws_url,
