@@ -4,6 +4,7 @@ loguru
 pytz
 pythclient
 typing_extensions
+pycoingecko
 
 # Testing
 pytest
