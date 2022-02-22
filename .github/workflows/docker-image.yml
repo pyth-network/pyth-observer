@@ -11,7 +11,6 @@ on:
       - "main"
 
 env:
-  ECR_REPOSITORY: pyth-observer
   AWS_REGION: eu-west-2
 
 jobs:
@@ -39,7 +38,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v3
         with:
-          images: ${{ steps.login-ecr.outputs.registry }}/$ECR_REPOSITORY
+          images: ${{ steps.login-ecr.outputs.registry }}/pyth-observer
 
       - name: Build and push
         uses: docker/build-push-action@v2
