@@ -36,7 +36,8 @@ jobs:
         uses: docker/metadata-action@v3
         with:
           images: ${{ steps.login-ecr.outputs.registry }}/pyth-observer
-          flavor: false
+          flavor: |
+            latest=false
 
       - name: Build and push
         uses: docker/build-push-action@v2
