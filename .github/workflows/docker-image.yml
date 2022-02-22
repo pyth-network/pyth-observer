@@ -11,6 +11,7 @@ on:
       - "main"
 
 env:
+  ECR_REPOSITORY: pyth-observer
   AWS_REGION: eu-west-2
 
 jobs:
