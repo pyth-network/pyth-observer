@@ -248,10 +248,10 @@ class StoppedPublishing(PriceValidationEvent):
 
     def get_event_details(self) -> Tuple[str, List[str]]:
         title = f"{self.publisher_name.upper()} stopped publishing {self.symbol} for {self.stopped_slots} slots"
-        details = (
+        details = [
             f"Aggregate last slot: {self.price.aggregate.slot}"
             f"Published last slot: {self.publisher_latest.slot}"
-        )
+        ]
         return title, details
 
 

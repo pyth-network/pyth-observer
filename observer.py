@@ -34,7 +34,7 @@ def get_publishers(network):
 
 
 async def main(args):
-    symbols_to_ignore = set(["Crypto.ORCA/USD"])
+    symbols_to_ignore = set(args.ignore) if args.ignore else set()
     program_key = get_key(network=args.network, type="program", version="v2")
     mapping_key = get_key(network=args.network, type="mapping", version="v2")
     http_url, ws_url = get_solana_urls(network=args.network)
@@ -205,6 +205,12 @@ if __name__ == "__main__":
         type=int,
         default=9001,
         help="Prometheus Exporter port",
+    )
+    parser.add_argument(
+        "-i",
+        "--ignore",
+        nargs="+",
+        help="List of symbols to ignore",
     )
     args = parser.parse_args()
 
