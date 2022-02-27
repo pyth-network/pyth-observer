@@ -113,6 +113,14 @@ class PriceValidator:
         if self.last_updated_slot is None or slot > self.last_updated_slot:
             self.last_updated_slot = slot
 
+    def update_coingecko_price(self, coingecko_price: Optional[float]) -> None:
+        """
+        Update the `coingecko_price` attribute
+        """
+        if coingecko_price is None:
+            return
+        self.coingecko_price = coingecko_price
+
     def update_events(self, event) -> None:
         if event.unique_id not in self.events:
             self.events[event.unique_id] = {
@@ -128,9 +136,11 @@ class PriceValidator:
         self,
         price_account: PythPriceAccount,
         symbols_to_ignore=set(),
-        events_to_ignore=set()
+        events_to_ignore=set(),
+        coingecko_price=None,
     ) -> Optional[List[ValidationEvent]]:
         self.update_slot(price_account.slot)
+        self.update_coingecko_price(coingecko_price)
 
         errors = []
         for validator in price_account_validators:

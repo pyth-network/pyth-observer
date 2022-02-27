@@ -99,7 +99,8 @@ async def main(args):
                         price_account_errors = validators[symbol].verify_price_account(
                             price_account=price_account,
                             symbols_to_ignore=symbols_to_ignore,
-                            events_to_ignore=events_to_ignore
+                            events_to_ignore=events_to_ignore,
+                            coingecko_price=coingecko_price,
                         )
                         if price_account_errors:
                             errors.extend(price_account_errors)
