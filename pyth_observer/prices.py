@@ -135,8 +135,6 @@ class PriceValidator:
     def verify_price_account(
         self,
         price_account: PythPriceAccount,
-        symbols_to_ignore=set(),
-        events_to_ignore=set(),
         coingecko_price=None,
     ) -> Optional[List[ValidationEvent]]:
         self.update_slot(price_account.slot)
@@ -144,8 +142,6 @@ class PriceValidator:
 
         errors = []
         for validator in price_account_validators:
-            if self.symbol in symbols_to_ignore and validator.error_code in events_to_ignore:
-                continue
             check = validator(
                 publisher_key=None,
                 price_account=price_account,
@@ -162,8 +158,6 @@ class PriceValidator:
         self,
         price: Price,
         include_noisy=False,
-        symbols_to_ignore=set(),
-        events_to_ignore=set()
     ) -> Optional[List[ValidationEvent]]:
         """
         Verify all published prices
@@ -179,8 +173,6 @@ class PriceValidator:
 
             if publisher_key in price.quoter_aggregates:
                 for price_validator in price_validators:
-                    if self.symbol in symbols_to_ignore and price_validator.error_code in events_to_ignore:
-                        continue
                     check = price_validator(
                         publisher_key=publisher_key,
                         price=price,

@@ -3,6 +3,7 @@ import argparse
 import asyncio
 import json
 import os
+import re
 import sys
 
 from aiohttp import ClientConnectorError
@@ -33,9 +34,19 @@ def get_publishers(network):
     return json_data.get(network, {})
 
 
+def filter_errors(regexes, errors):
+    filtered_errors = []
+    for e in errors:
+        skip = False
+        for r in regexes:
+            if re.search(r, f"{e.symbol}/{e.error_code}"):
+                skip = True
+        if not skip:
+            filtered_errors.append(e)
+    return filtered_errors
+
+
 async def main(args):
-    symbols_to_ignore = set(args.ignore_symbols) if args.ignore_symbols else set()
-    events_to_ignore = set(args.ignore_events) if args.ignore_events else set()
     program_key = get_key(network=args.network, type="program", version="v2")
     mapping_key = get_key(network=args.network, type="mapping", version="v2")
     http_url, ws_url = get_solana_urls(network=args.network)
@@ -98,12 +109,12 @@ async def main(args):
                         )
                         price_account_errors = validators[symbol].verify_price_account(
                             price_account=price_account,
-                            symbols_to_ignore=symbols_to_ignore,
-                            events_to_ignore=events_to_ignore,
                             coingecko_price=coingecko_price,
                         )
                         if price_account_errors:
-                            errors.extend(price_account_errors)
+                            filtered_errors = filter_errors(
+                                args.ignore, price_account_errors) if args.ignore else price_account_errors
+                            errors.extend(filtered_errors)
 
                         for price_comp in price_account.price_components:
                             # The PythPublisherKey
@@ -125,11 +136,11 @@ async def main(args):
                         price_errors = validators[symbol].verify_price(
                             price=price,
                             include_noisy=args.include_noisy_alerts,
-                            symbols_to_ignore=symbols_to_ignore,
-                            events_to_ignore=events_to_ignore
                         )
                         if price_errors:
-                            errors.extend(price_errors)
+                            filtered_errors = filter_errors(
+                                args.ignore, price_errors) if args.ignore else price_errors
+                            errors.extend(filtered_errors)
 
                     # Send all notifications for a given symbol pair
                     await validators[symbol].notify(
@@ -211,14 +222,9 @@ if __name__ == "__main__":
         help="Prometheus Exporter port",
     )
     parser.add_argument(
-        "--ignore-symbols",
+        "--ignore",
         nargs="+",
-        help="List of symbols to ignore",
-    )
-    parser.add_argument(
-        "--ignore-events",
-        nargs="+",
-        help="List of events to ignore",
+        help="List of symbols and/or events to ignore",
     )
     args = parser.parse_args()
 
