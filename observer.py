@@ -3,6 +3,7 @@ import argparse
 import asyncio
 import json
 import os
+import re
 import sys
 
 from aiohttp import ClientConnectorError
@@ -31,6 +32,18 @@ def get_publishers(network):
         logger.error("problem loading publishers.json only keys will be printed")
         json_data = {}
     return json_data.get(network, {})
+
+
+def filter_errors(regexes, errors):
+    filtered_errors = []
+    for e in errors:
+        skip = False
+        for r in regexes:
+            if re.match(r, f"{e.symbol}/{e.error_code}", re.IGNORECASE):
+                skip = True
+        if not skip:
+            filtered_errors.append(e)
+    return filtered_errors
 
 
 async def main(args):
@@ -88,7 +101,6 @@ async def main(args):
                                 symbol=symbol,
                                 coingecko_price=coingecko_price
                             )
-
                         prices = await product.get_prices()
 
                         for _, price_account in prices.items():
@@ -122,14 +134,16 @@ async def main(args):
 
                             # Where the magic happens!
                             price_errors = validators[symbol].verify_price(
-                                price=price, include_noisy=args.include_noisy_alerts
+                                price=price,
+                                include_noisy=args.include_noisy_alerts,
                             )
                             if price_errors:
                                 errors.extend(price_errors)
 
+                        filtered_errors = filter_errors(args.ignore, errors) if args.ignore else errors
                         # Send all notifications for a given symbol pair
                         await validators[symbol].notify(
-                            errors,
+                            filtered_errors,
                             slack_webhook_url=args.slack_webhook_url,
                             notification_mins=args.notification_snooze_mins,
                         )
@@ -207,10 +221,9 @@ if __name__ == "__main__":
         help="Prometheus Exporter port",
     )
     parser.add_argument(
-        "-i",
         "--ignore",
         nargs="+",
-        help="List of symbols to ignore",
+        help="List of symbols and / or events to ignore. For e.g. 'Crypto.ORCA/USD' to ignore all ORCA alerts and 'FX.*/price-feed-offline' to ignore all price-feed-offline alerts for all FX pairs",
     )
     args = parser.parse_args()
 

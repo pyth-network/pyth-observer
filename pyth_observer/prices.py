@@ -176,9 +176,7 @@ class PriceValidator:
     async def notify(self, events, **kwargs):
         """
         Send notifications for erroneous events.
-
         A few useful kwargs:
-
             slack_webhook_url: for alerting via slack
             notification_mins: number of minutes between sending nearly identical alerts.
         """
