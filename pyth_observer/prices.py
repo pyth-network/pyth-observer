@@ -113,14 +113,6 @@ class PriceValidator:
         if self.last_updated_slot is None or slot > self.last_updated_slot:
             self.last_updated_slot = slot
 
-    def update_coingecko_price(self, coingecko_price: Optional[float]) -> None:
-        """
-        Update the `coingecko_price` attribute
-        """
-        if coingecko_price is None:
-            return
-        self.coingecko_price = coingecko_price
-
     def update_events(self, event) -> None:
         if event.unique_id not in self.events:
             self.events[event.unique_id] = {
@@ -133,12 +125,9 @@ class PriceValidator:
         })
 
     def verify_price_account(
-        self,
-        price_account: PythPriceAccount,
-        coingecko_price=None,
+        self, price_account: PythPriceAccount
     ) -> Optional[List[ValidationEvent]]:
         self.update_slot(price_account.slot)
-        self.update_coingecko_price(coingecko_price)
 
         errors = []
         for validator in price_account_validators:
@@ -155,9 +144,7 @@ class PriceValidator:
         return errors
 
     def verify_price(
-        self,
-        price: Price,
-        include_noisy=False,
+        self, price: Price, include_noisy=False
     ) -> Optional[List[ValidationEvent]]:
         """
         Verify all published prices
@@ -189,9 +176,7 @@ class PriceValidator:
     async def notify(self, events, **kwargs):
         """
         Send notifications for erroneous events.
-
         A few useful kwargs:
-
             slack_webhook_url: for alerting via slack
             notification_mins: number of minutes between sending nearly identical alerts.
         """
