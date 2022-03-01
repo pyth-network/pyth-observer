@@ -39,7 +39,7 @@ def filter_errors(regexes, errors):
     for e in errors:
         skip = False
         for r in regexes:
-            if re.search(r, f"{e.symbol}/{e.error_code}"):
+            if re.match(r, f"{e.symbol}/{e.error_code}", re.IGNORECASE):
                 skip = True
         if not skip:
             filtered_errors.append(e)
@@ -112,9 +112,7 @@ async def main(args):
                             coingecko_price=coingecko_price,
                         )
                         if price_account_errors:
-                            filtered_errors = filter_errors(
-                                args.ignore, price_account_errors) if args.ignore else price_account_errors
-                            errors.extend(filtered_errors)
+                            errors.extend(price_account_errors)
 
                         for price_comp in price_account.price_components:
                             # The PythPublisherKey
@@ -138,13 +136,12 @@ async def main(args):
                             include_noisy=args.include_noisy_alerts,
                         )
                         if price_errors:
-                            filtered_errors = filter_errors(
-                                args.ignore, price_errors) if args.ignore else price_errors
-                            errors.extend(filtered_errors)
+                            errors.extend(price_errors)
 
+                    filtered_errors = filter_errors(args.ignore, errors) if args.ignore else errors
                     # Send all notifications for a given symbol pair
                     await validators[symbol].notify(
-                        errors,
+                        filtered_errors,
                         slack_webhook_url=args.slack_webhook_url,
                         notification_mins=args.notification_snooze_mins,
                     )
@@ -224,7 +221,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--ignore",
         nargs="+",
-        help="List of symbols and/or events to ignore",
+        help="List of symbols and / or events to ignore. For e.g. 'Crypto.ORCA/USD' to ignore all ORCA alerts and 'FX.*/price-feed-offline' to ignore all price-feed-offline alerts for all FX pairs",
     )
     args = parser.parse_args()
 
