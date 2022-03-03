@@ -2,8 +2,6 @@ aiohttp<4.0.0a1
 dnspython
 loguru
 pytz
-pythclient
-typing_extensions
 pycoingecko==2.2.0
 
 # Testing
