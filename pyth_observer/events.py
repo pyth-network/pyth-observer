@@ -75,6 +75,10 @@ class ValidationEvent:
         return "", []
 
     def is_valid(self) -> bool:
+        """
+        Return True if the invariant checked by this event is satisfied.
+        Return False if the event should trigger a notification.
+        """
         raise NotImplementedError
 
     def is_noisy(self) -> bool:
