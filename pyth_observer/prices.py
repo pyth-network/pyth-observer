@@ -136,6 +136,7 @@ class PriceValidator:
         self,
         price_account: PythPriceAccount,
         coingecko_price=None,
+        include_noisy=False,
     ) -> Optional[List[ValidationEvent]]:
         self.update_slot(price_account.slot)
         self.update_coingecko_price(coingecko_price)
@@ -149,6 +150,8 @@ class PriceValidator:
                 symbol=self.symbol,
                 coingecko_price=self.coingecko_price,
             )
+            if include_noisy is False and check.is_noisy():
+                continue
             if check.is_valid() is False:
                 self.update_events(check)
                 errors.append(check)
