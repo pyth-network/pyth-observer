@@ -363,9 +363,9 @@ class LongDurationPriceFeedOffline(PriceAccountValidationEvent):
         return active_publishers
 
     def get_event_details(self) -> Tuple[str, List[str]]:
+        # There's not a good way to get the last time the feed updated, unfortunately.
         title = f"{self.symbol} price feed is offline (no update for > {self.threshold_slots} slots)"
         details = [
-            # f"Last Updated Slot: {self.price_account.aggregate_price_info.slot}",
             f"Current Slot: {self.price_account.slot}",
             f"Status: {self.price_account.aggregate_price_info.price_status}"
         ]
