@@ -315,6 +315,58 @@ class PriceFeedOffline(PriceAccountValidationEvent):
         ]
         return title, details
 
+    def is_noisy(self) -> bool:
+        """
+        This event can be very noisy because several of our price feeds are flaky.
+        """
+        return True
+
+
+class LongDurationPriceFeedOffline(PriceAccountValidationEvent):
+    """
+    This alert fires when a price feed should be updating, but isn't.
+    It alerts when a price hasn't updated in > PYTH_OBSERVER_STOP_PUBLISHING_MIN_SLOTS (default 600) slots.
+    This alert requires a longer offline duration than PriceFeedOffline.
+    """
+    error_code: str = "long-price-feed-offline"
+    threshold_slots: int = int(os.environ.get("PYTH_OBSERVER_STOP_PUBLISHING_MIN_SLOTS", 600))
+
+    def is_valid(self) -> bool:
+        # The aggregate's slot field updates even when the status=UNKNOWN, but each publisher's slot
+        # only updates when they are included in the aggregate. Therefore, look at the last publish slot
+        # for each publisher to determine the last slot in which a sufficient number of publishers were active.
+        # This check has perfect precision but imperfect recall.  If the alert fires, the price feed has
+        # definitely been offline for the configured duration. However, there are cases when it should fire but
+        # doesn't. For example, it will not fire if there are 3 publishers publishing
+        # every 100 slots, but spaced so that the 3 are never active at the same time.
+        # However, this situation is unlikely.
+        active_publishers = self._get_num_active_publishers()
+
+        if active_publishers < self.price_account.min_publishers:
+            market_open = calendar.is_market_open(
+                self.price_account.product.attrs['asset_type'], datetime.datetime.now(tz=TZ))
+            if market_open:
+                return False
+        return True
+
+    def _get_num_active_publishers(self) -> int:
+        active_publishers = 0
+        for component in self.price_account.price_components:
+            stopped_slots = self.price_account.last_slot - component.last_aggregate_price_info.slot
+            if stopped_slots < self.threshold_slots:
+                active_publishers += 1
+
+        return active_publishers
+
+    def get_event_details(self) -> Tuple[str, List[str]]:
+        title = f"{self.symbol} price feed is offline (no update for > {self.threshold_slots} slots)"
+        details = [
+            # f"Last Updated Slot: {self.price_account.aggregate_price_info.slot}",
+            f"Current Slot: {self.price_account.slot}",
+            f"Status: {self.price_account.aggregate_price_info.price_status}"
+        ]
+        return title, details
+
 
 class NegativeTWAP(PriceAccountValidationEvent):
     error_code: str = "negative-twap"
