@@ -222,7 +222,10 @@ if __name__ == "__main__":
     parser.add_argument(
         "--ignore",
         nargs="+",
-        help="List of symbols and / or events to ignore. For e.g. 'Crypto.ORCA/USD' to ignore all ORCA alerts and 'FX.*/price-feed-offline' to ignore all price-feed-offline alerts for all FX pairs",
+        help="List of symbols and / or events to ignore. "
+             "For e.g. 'Crypto.ORCA/USD' to ignore all ORCA alerts and "
+             "'FX.*/price-feed-offline' to ignore all price-feed-offline "
+             "alerts for all FX pairs",
     )
     args = parser.parse_args()
 

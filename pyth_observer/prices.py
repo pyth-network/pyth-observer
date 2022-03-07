@@ -11,8 +11,6 @@ from pythclient.pythaccounts import (
     PythPriceInfo,
 )
 
-from pyth_observer import coingecko
-
 from .notification import (
     SlackNotification,
     LoggerNotification,

@@ -127,7 +127,9 @@ class BadConfidence(PriceValidationEvent):
     error_code: str = "bad-confidence"
 
     def is_valid(self):
-        if self.publisher_aggregate.confidence_interval <= 0 and self.publisher_aggregate.price_status == PythPriceStatus.TRADING:
+        neg_ci = self.publisher_aggregate.confidence_interval <= 0
+        trading = self.publisher_aggregate.price_status == PythPriceStatus.TRADING
+        if neg_ci and trading:
             return False
         return True
 
@@ -261,7 +263,9 @@ class StoppedPublishing(PriceValidationEvent):
 
 class PublisherPriceFeedOffline(PriceValidationEvent):
     """
-    This alert is supposed to fire when a publisher price feed should be updating, but isn't. It alerts when a publisher price hasn't updated its price in > 25 slots OR its status is unknown.
+    This alert is supposed to fire when a publisher price feed should be
+    updating, but isn't. It alerts when a publisher price hasn't updated its
+    price in > 25 slots OR its status is unknown.
     """
     error_code: str = "publisher-price-feed-offline"
 
@@ -276,7 +280,8 @@ class PublisherPriceFeedOffline(PriceValidationEvent):
         return True
 
     def get_event_details(self) -> Tuple[str, List[str]]:
-        title = f"{self.publisher_key} {self.symbol} price feed is offline (has not updated its price in > 25 slots OR status is unknown)"
+        title = f"{self.publisher_key} {self.symbol} price feed is offline "
+        title += "(has not updated its price in > 25 slots OR status is unknown)"
         details = [
             f"Last Updated Slot: {self.publisher_latest.slot}",
             f"Current Slot: {self.price.slot}",
@@ -296,14 +301,17 @@ class PublisherPriceFeedOffline(PriceValidationEvent):
 
 class PriceFeedOffline(PriceAccountValidationEvent):
     """
-    This alert is supposed to fire when a price feed should be updating, but isn't. It alerts when a price hasn't updated its price in > 25 slots OR its status is unknown.
+    This alert is supposed to fire when a price feed should be updating, but
+    isn't. It alerts when a price hasn't updated its price in > 25 slots OR
+    its status is unknown.
     """
     error_code: str = "price-feed-offline"
 
     def is_valid(self) -> bool:
         self.slot_diff = self.price_account.slot - self.price_account.aggregate_price_info.slot
+        trading = self.price_account.aggregate_price_info.price_status == PythPriceStatus.TRADING
 
-        if self.slot_diff > MAX_SLOT_DIFFERENCE or self.price_account.aggregate_price_info.price_status != PythPriceStatus.TRADING:
+        if self.slot_diff > MAX_SLOT_DIFFERENCE or not trading:
             market_open = calendar.is_market_open(
                 self.price_account.product.attrs['asset_type'], datetime.datetime.now(tz=TZ))
             if market_open:
@@ -311,7 +319,8 @@ class PriceFeedOffline(PriceAccountValidationEvent):
         return True
 
     def get_event_details(self) -> Tuple[str, List[str]]:
-        title = f"{self.symbol} price feed is offline (has not updated its price in > 25 slots OR status is unknown)"
+        title = f"{self.symbol} price feed is offline (has not updated its"
+        title += " price in > 25 slots OR status is unknown)"
         details = [
             f"Last Updated Slot: {self.price_account.aggregate_price_info.slot}",
             f"Current Slot: {self.price_account.slot}",
@@ -458,8 +467,10 @@ class PriceDeviationCoinGecko(PriceAccountValidationEvent):
     threshold = int(os.environ.get('PYTH_OBSERVER_PRICE_DEVIATION_COINGECKO', 5))
 
     def is_valid(self) -> bool:
+        trading = self.price_account.aggregate_price_info.price_status == PythPriceStatus.TRADING
         pyth_price = self.price_account.aggregate_price_info.price
-        if self.price_account.aggregate_price_info.price_status != PythPriceStatus.TRADING or self.coingecko_price is None or pyth_price == 0:
+
+        if not trading or self.coingecko_price is None or pyth_price == 0:
             # TODO: add another alert that checks if coingecko is down
             return True
 
@@ -473,10 +484,12 @@ class PriceDeviationCoinGecko(PriceAccountValidationEvent):
 
     def get_event_details(self) -> Tuple[str, List[str]]:
         title = f"{self.symbol} is more than {self.threshold}% off from CoinGecko"
+        coin_name = get_coingecko_market_id(self.price_account.product.attrs['base'])
+        url = f"https://www.coingecko.com/en/coins/{coin_name}"
         details = [
             f"Pyth Price: {self.price_account.aggregate_price_info.price}",
             f"CoinGecko Price: {self.coingecko_price['usd']}",
             f"Deviation: {self.coingecko_deviation}% off",
-            f"CoinGecko Price Chart: https://www.coingecko.com/en/coins/{get_coingecko_market_id(self.price_account.product.attrs['base'])}"
+            f"CoinGecko Price Chart: {url}"
         ]
         return title, details
