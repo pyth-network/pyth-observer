@@ -110,6 +110,7 @@ async def main(args):
                         price_account_errors = validators[symbol].verify_price_account(
                             price_account=price_account,
                             coingecko_price=coingecko_price,
+                            include_noisy=args.include_noisy_alerts,
                         )
                         if price_account_errors:
                             errors.extend(price_account_errors)
