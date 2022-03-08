@@ -5,6 +5,7 @@ import json
 import os
 import re
 import sys
+import importlib
 
 from aiohttp import ClientConnectorError
 from loguru import logger
@@ -34,6 +35,32 @@ def get_publishers(network):
     return json_data.get(network, {})
 
 
+def init_notifiers(names):
+    """
+    Given the array of --notifyer= args, load the appropriate modules and
+    initialise an object with any args.
+    Return an array of initialised objects
+    """
+
+    notifiers = []
+    for i in names:
+        args = i.split(sep="=", maxsplit=1)
+        if len(args) == 0:
+            raise ValueError("Notifier name not provided")
+        if len(args) == 1:
+            # Ensure we always have a param container, even if it is a dummy
+            args.append(None)
+
+        try:
+            module = importlib.import_module(args[0])
+        except ModuleNotFoundError:
+            raise NameError(f'Notifier Module "{args[0]}" could not be found')
+        notifier = module.Notifier(args[1])
+        notifiers.append(notifier)
+
+    return notifiers
+
+
 def filter_errors(regexes, errors):
     filtered_errors = []
     for e in errors:
@@ -56,6 +83,8 @@ async def main(args):
     gprice = Gauge(
         "crypto_price", "Price", labelnames=["symbol", "publisher", "status"]
     )
+
+    notifiers = init_notifiers(args.notifier)
 
     async def run_alerts():
         async with PythClient(
@@ -143,7 +172,7 @@ async def main(args):
                     # Send all notifications for a given symbol pair
                     await validators[symbol].notify(
                         filtered_errors,
-                        slack_webhook_url=args.slack_webhook_url,
+                        notifiers,
                         notification_mins=args.notification_snooze_mins,
                     )
                 await asyncio.sleep(0.4)
@@ -227,7 +256,22 @@ if __name__ == "__main__":
              "'FX.*/price-feed-offline' to ignore all price-feed-offline "
              "alerts for all FX pairs",
     )
+    parser.add_argument(
+        "--notifier",
+        action="append",
+        help="Specify a notification system to be used.  Parameters can be "
+             "passed to the notifier by separating with an equals sign",
+    )
     args = parser.parse_args()
+
+    # we might have an old slack config option
+    #
+    if not args.notifier:
+        if args.slack_webhook_url is not None:
+            slack = args.slack_webhook_url
+            args.notifier = [f'pyth_observer.notifiers.slack={slack}']
+        else:
+            args.notifier = ["pyth_observer.notifiers.logger"]
 
     logger.remove()
     logger.add(sys.stderr, level=args.log_level)
