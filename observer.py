@@ -5,6 +5,7 @@ import json
 import os
 import re
 import sys
+from typing import List
 
 from aiohttp import ClientConnectorError
 from loguru import logger
@@ -55,8 +56,11 @@ async def main(args):
     prom_prices = Gauge(
         "crypto_price", "Price", labelnames=["symbol", "publisher", "status"]
     )
-    prom_publisher_status = Gauge(
-        "publisher_status", "Publisher Status", labelnames=["symbol", "publisher", "error_code"]
+    prom_price_account_errors = Gauge(
+        "pyth_publisher_price_errors", "Price errors for publishers", labelnames=["symbol", "error_code"]
+    )
+    prom_publisher_price_errors = Gauge(
+        "pyth_price_account_errors", "Price errors for price accounts", labelnames=["symbol", "publisher", "error_code"]
     )
 
     async def run_alerts():
@@ -87,7 +91,10 @@ async def main(args):
                     continue
 
                 for product in products:
-                    errors = []
+                    all_errors = []
+                    all_publishers = []
+                    errors_by_publishers = {}
+
                     symbol = product.symbol
                     coingecko_price = coingecko_prices.get(product.attrs['base'])
 
@@ -102,6 +109,8 @@ async def main(args):
                         )
                     prices = await product.get_prices()
 
+                    # Even though we iterate over a list of price accounts, each
+                    # product currently has a single price account.
                     for _, price_account in prices.items():
                         price = Price(
                             slot=price_account.slot,
@@ -119,18 +128,16 @@ async def main(args):
                             include_noisy=args.include_noisy_alerts,
                         )
 
-                        if price_account_errors:
-                            errors.extend(price_account_errors)
-
-                        if price_errors:
-                            errors.extend(price_errors)
+                        all_errors.extend(price_account_errors)
+                        all_errors.extend(price_errors)
 
                         for price_comp in price_account.price_components:
                             # The PythPublisherKey
                             publisher_key = price_comp.publisher_key.key
-
                             price.quoters[publisher_key] = price_comp.latest_price_info
                             price.quoter_aggregates[publisher_key] = price_comp.last_aggregate_price_info
+
+                            all_publishers.append(publisher_key)
 
                             if args.enable_prometheus:
                                 prom_prices.labels(
@@ -139,35 +146,44 @@ async def main(args):
                                     status=price.quoters[publisher_key].price_status.name,
                                 ).set(price.quoters[publisher_key].price)
 
-                                # Write OK as empty error code
-                                if not price_errors and not price_account_errors:
-                                    prom_publisher_status.labels(
+                    filtered_errors = filter_errors(args.ignore, all_errors) if args.ignore else all_errors
+
+                    for error in filtered_errors:
+                        if error.publisher_key in errors_by_publishers:
+                            errors_by_publishers[error.publisher_key].append(error)
+                        else:
+                            errors_by_publishers[error.publisher_key] = [error]
+
+                    if args.enable_prometheus:
+                        # Report price account errors
+                        if None in errors_by_publishers:
+                            for error in errors_by_publishers[None]:
+                                prom_price_account_errors.labels(
+                                    symbol=symbol,
+                                    error_code=error.error_code,
+                                ).set(1)
+                        else:
+                            prom_price_account_errors.labels(
+                                symbol=symbol,
+                                error_code="",
+                            ).set(1)
+
+                        # Report publisher price errors
+                        for publisher in all_publishers:
+                            if publisher in errors_by_publishers:
+                                for error in errors_by_publishers[publisher]:
+                                    prom_publisher_price_errors.labels(
                                         symbol=symbol,
-                                        publisher=publisher_key,
-                                        error_code="",
+                                        publisher=publisher,
+                                        error_code=error.error_code,
                                     ).set(1)
+                            else:
+                                prom_publisher_price_errors.labels(
+                                    symbol=symbol,
+                                    publisher=publisher,
+                                    error_code="",
+                                ).set(1)
 
-                                # Write price error status
-                                if price_errors:
-                                    for error in price_errors:
-                                        if error.publisher_key == publisher_key:
-                                            prom_publisher_status.labels(
-                                                symbol=symbol,
-                                                publisher=publisher_key,
-                                                error_code=error.error_code,
-                                            ).set(1)
-
-                                # Write price account error status
-                                if price_account_errors:
-                                    for error in price_account_errors:
-                                        prom_publisher_status.labels(
-                                            symbol=symbol,
-                                            publisher=publisher_key,
-                                            error_code=error.error_code,
-                                        ).set(1)
-
-
-                    filtered_errors = filter_errors(args.ignore, errors) if args.ignore else errors
                     # Send all notifications for a given symbol pair
                     await validators[symbol].notify(
                         filtered_errors,
