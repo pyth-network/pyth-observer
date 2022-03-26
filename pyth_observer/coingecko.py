@@ -1,13 +1,11 @@
 import json
 import os
 
+from aiocoingecko import AsyncCoinGeckoAPISession
 from pycoingecko import CoinGeckoAPI
-
+from asyncio_throttle import Throttler
 
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
-
-cg = CoinGeckoAPI()
-
 
 def get_coingecko_symbol_to_id_mapping():
     with open(f'{ROOT_DIR}/coingecko_mapping.json') as json_file:
@@ -19,12 +17,17 @@ def get_coingecko_symbol_to_id_mapping():
 symbol_to_id_mapping = get_coingecko_symbol_to_id_mapping()
 api_to_symbol_mapping = {symbol_to_id_mapping[x]['api']: x for x in symbol_to_id_mapping}
 
+throttler = Throttler(rate_limit=1, period=1)
 
-def get_coingecko_prices(symbols):
+async def get_coingecko_prices(symbols):
     ids = [symbol_to_id_mapping[x]["api"] for x in symbol_to_id_mapping if x in symbols]
-    prices = cg.get_price(ids=ids, vs_currencies='usd')
+
+    async with AsyncCoinGeckoAPISession() as client:
+        async with throttler:
+            prices = await client.get_price(ids=",".join(ids), vs_currencies='usd')
     # remap to symbol -> prices
     prices_mapping = {api_to_symbol_mapping[x]: prices[x] for x in prices}
+
     return prices_mapping
 
 
