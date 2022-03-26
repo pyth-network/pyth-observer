@@ -163,6 +163,7 @@ async def main(args):
                                     error_code=error.error_code,
                                 ).set(1)
                         else:
+                            continue
                             prom_price_account_errors.labels(
                                 symbol=symbol,
                                 error_code="",
@@ -178,6 +179,7 @@ async def main(args):
                                         error_code=error.error_code,
                                     ).set(1)
                             else:
+                                continue
                                 prom_publisher_price_errors.labels(
                                     symbol=symbol,
                                     publisher=publisher,
