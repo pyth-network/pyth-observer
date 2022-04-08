@@ -37,7 +37,7 @@ def get_publishers(network):
 
 def init_notifiers(names):
     """
-    Given the array of --notifyer= args, load the appropriate modules and
+    Given the array of --notifier= args, load the appropriate modules and
     initialise an object with any args.
     Return an array of initialised objects
     """
