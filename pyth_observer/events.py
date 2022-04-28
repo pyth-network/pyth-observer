@@ -136,7 +136,7 @@ class BadConfidence(PriceValidationEvent):
         title = f"{self.publisher_name.upper()} bad confidence for {self.symbol}"
 
         details = [
-            f"Confidence: {self.publisher_aggregate.confidence_interval:.2f}",
+            f"Confidence: {self.publisher_aggregate.confidence_interval:.3f}",
             f"Status: {self.publisher_aggregate.price_status.name}",
         ]
         return title, details
@@ -191,8 +191,8 @@ class ImprobableAggregate(PriceValidationEvent):
             f"confidence intervals away on {self.symbol}"
         )
         details = [
-            f"Aggregate: {agg.price:.2f} ± {agg.confidence_interval:.2f} (slot {agg.slot})",
-            f"Published:  {published.price:.2f} ± {published.confidence_interval:.2f} (slot {published.slot})",
+            f"Aggregate: {agg.price:.3f} ± {agg.confidence_interval:.3f} (slot {agg.slot})",
+            f"Published:  {published.price:.3f} ± {published.confidence_interval:.3f} (slot {published.slot})",
         ]
         return title, details
 
@@ -224,8 +224,8 @@ class PriceDeviation(PriceValidationEvent):
         published = self.publisher_aggregate
         title = f"{self.publisher_name.upper()} price is {self.deviation:.0f}% off on {self.symbol}"
         details = [
-            f"Aggregate: {agg.price:.2f} ± {agg.confidence_interval:.2f} (slot {agg.slot})",
-            f"Published:  {published.price:.2f} ± {published.confidence_interval:.2f} (slot {published.slot})",
+            f"Aggregate: {agg.price:.3f} ± {agg.confidence_interval:.3f} (slot {agg.slot})",
+            f"Published:  {published.price:.3f} ± {published.confidence_interval:.3f} (slot {published.slot})",
         ]
         return title, details
 
@@ -387,8 +387,8 @@ class NegativeTWAP(PriceAccountValidationEvent):
 
         title = f"{self.symbol} negative TWAP"
         details = [
-            f"TWAP: {self.twap:.2f} (slot {self.price_account.slot})",
-            f"Aggregate: {agg_price:.2f} (slot {self.price_account.aggregate_price_info.slot})",
+            f"TWAP: {self.twap:.3f} (slot {self.price_account.slot})",
+            f"Aggregate: {agg_price:.3f} (slot {self.price_account.aggregate_price_info.slot})",
         ]
         return title, details
 
@@ -408,8 +408,8 @@ class NegativeTWAC(PriceAccountValidationEvent):
 
         title = f"{self.symbol} negative TWAC"
         details = [
-            f"TWAC: {self.twac:.2f} (slot {self.price_account.slot})",
-            f"Aggregate: {agg_price:.2f} (slot {self.price_account.aggregate_price_info.slot})",
+            f"TWAC: {self.twac:.3f} (slot {self.price_account.slot})",
+            f"Aggregate: {agg_price:.3f} (slot {self.price_account.aggregate_price_info.slot})",
         ]
         return title, details
 
@@ -444,7 +444,7 @@ class TWAPvsAggregate(PriceAccountValidationEvent):
 
         title = f"{self.symbol} Aggregate is {self.deviation:.0f}% different than TWAP"
         details = [
-            f"TWAP: {self.twap:.2f} (slot {self.price_account.slot})",
+            f"TWAP: {self.twap:.3f} (slot {self.price_account.slot})",
             f"Aggregate: {agg_price:.3f} (slot {self.price_account.aggregate_price_info.slot})",
         ]
         return title, details
