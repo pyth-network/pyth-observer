@@ -345,8 +345,10 @@ class LongDurationPriceFeedOffline(PriceAccountValidationEvent):
         # every 100 slots, but spaced so that the 3 are never active at the same time.
         # However, this situation is unlikely.
         active_publishers = self._get_num_active_publishers()
+        min_publishers = self.price_account.min_publishers
 
-        if active_publishers < self.price_account.min_publishers:
+        # min_publishers >= 10 means the feed is "coming soon". We expect it to be offline.
+        if active_publishers < self.price_account.min_publishers and min_publishers < 10:
             market_open = calendar.is_market_open(
                 self.price_account.product.attrs['asset_type'], datetime.datetime.now(tz=TZ))
             if market_open:
