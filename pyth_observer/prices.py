@@ -11,13 +11,6 @@ from pythclient.pythaccounts import (
     PythPriceInfo,
 )
 
-from pyth_observer import coingecko
-
-from .notification import (
-    SlackNotification,
-    LoggerNotification,
-)
-
 from .events import (
     ValidationEvent,
     price_validators,
@@ -189,19 +182,14 @@ class PriceValidator:
                         errors.append(check)
         return errors
 
-    async def notify(self, events, **kwargs):
+    async def notify(self, events, notifiers, **kwargs):
         """
         Send notifications for erroneous events.
 
         A few useful kwargs:
 
-            slack_webhook_url: for alerting via slack
             notification_mins: number of minutes between sending nearly identical alerts.
         """
-        if kwargs.get("slack_webhook_url"):
-            notifier = SlackNotification(kwargs["slack_webhook_url"])
-        else:
-            notifier = LoggerNotification()
 
         for event in events:
             event_data = self.events[event.unique_id]
@@ -229,4 +217,6 @@ class PriceValidator:
                 "skipped": 0,
                 "last_notified": datetime.now(),
             })
-            await notifier.notify(event)
+
+            for notifier in notifiers:
+                await notifier.notify(event)
