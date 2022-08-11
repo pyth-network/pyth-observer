@@ -1,12 +1,12 @@
 import pytest
 from pyth_observer.events import TWAPvsAggregate
-from pythclient.pythaccounts import TwEmaType, PythPriceType, PythPriceInfo, PythPriceStatus
+from pythclient.pythaccounts import EmaType, PythPriceType, PythPriceInfo, PythPriceStatus
 from typing import List, Dict, Tuple, Optional, Any
 
 
 class MockPriceAccount:
     def __init__(self):
-        self.derivations: Dict[TwEmaType, int] = {}
+        self.derivations: Dict[EmaType, int] = {}
         self.exponent = 0
         self.aggregate_price = 0
         self.price_type = PythPriceType.PRICE
@@ -20,7 +20,7 @@ def check_average(twap, aggregate, exponent, expected_str):
     network = "mainnet"
     symbol = "ZZZT"
 
-    pa.derivations[TwEmaType.TWAPVALUE] = 49132540
+    pa.derivations[EmaType.EMA_PRICE_VALUE] = 49132540
     pa.exponent = exponent
     pa.aggregate_price = aggregate * 10**exponent
 
@@ -41,6 +41,6 @@ def test_averages():
     # within 10%
     check_average(49132540, 48121502, 3, None)
     # outside 10%
-    check_average(49132540, 43121502, 3, "ZZZT Aggregate is 14% different than TWAP")
+    check_average(49132540, 43121502, 3, "ZZZT Aggregate is 14% different than EMA Price")
     # 0.0 aggregate happens occasionally when a publisher publishes bad data
     check_average(49132540, 0.0, 3, None)

@@ -12,7 +12,7 @@ def check_price_deviation(publisher_price, publisher_status, aggregate_price, ag
         raw_price=aggregate_price,
         raw_confidence_interval=1,
         price_status=aggregate_status,
-        slot=1,
+        pub_slot=1,
         exponent=-1,
     )
 
@@ -22,7 +22,7 @@ def check_price_deviation(publisher_price, publisher_status, aggregate_price, ag
         raw_price=publisher_price,
         raw_confidence_interval=1,
         price_status=publisher_status,
-        slot=1,
+        pub_slot=1,
         exponent=-1
     )
     price.quoter_aggregates[publisher_key] = quoter_aggregate
@@ -31,7 +31,7 @@ def check_price_deviation(publisher_price, publisher_status, aggregate_price, ag
         raw_price=0,
         raw_confidence_interval=1,
         price_status=publisher_status,
-        slot=1,
+        pub_slot=1,
         exponent=-1
     )
     price.quoters[publisher_key] = quoter_latest

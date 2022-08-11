@@ -14,7 +14,7 @@ def check_publisher_price_offline(current_slot, publisher_slot, publisher_status
         raw_price=0,
         raw_confidence_interval=1,
         price_status=publisher_status,
-        slot=5,
+        pub_slot=5,
         exponent=-1
     )
     price.quoter_aggregates[publisher_key] = quoter_aggregate
@@ -23,7 +23,7 @@ def check_publisher_price_offline(current_slot, publisher_slot, publisher_status
         raw_price=0,
         raw_confidence_interval=1,
         price_status=publisher_status,
-        slot=publisher_slot,
+        pub_slot=publisher_slot,
         exponent=-1
     )
     price.quoters[publisher_key] = publisher_latest

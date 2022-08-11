@@ -195,8 +195,8 @@ class ImprobableAggregate(PriceValidationEvent):
             f"confidence intervals away on {self.symbol}"
         )
         details = [
-            f"Aggregate: {agg.price:.3f} ± {agg.confidence_interval:.3f} (slot {agg.slot})",
-            f"Published:  {published.price:.3f} ± {published.confidence_interval:.3f} (slot {published.slot})",
+            f"Aggregate: {agg.price:.3f} ± {agg.confidence_interval:.3f} (slot {agg.pub_slot})",
+            f"Published:  {published.price:.3f} ± {published.confidence_interval:.3f} (slot {published.pub_slot})",
         ]
         return title, details
 
@@ -230,8 +230,8 @@ class PriceDeviation(PriceValidationEvent):
         published = self.publisher_aggregate
         title = f"{self.publisher_name.upper()} price is {self.deviation:.0f}% off on {self.symbol}"
         details = [
-            f"Aggregate: {agg.price:.3f} ± {agg.confidence_interval:.3f} (slot {agg.slot})",
-            f"Published:  {published.price:.3f} ± {published.confidence_interval:.3f} (slot {published.slot})",
+            f"Aggregate: {agg.price:.3f} ± {agg.confidence_interval:.3f} (slot {agg.pub_slot})",
+            f"Published:  {published.price:.3f} ± {published.confidence_interval:.3f} (slot {published.pub_slot})",
         ]
         return title, details
 
@@ -263,8 +263,8 @@ class StoppedPublishing(PriceValidationEvent):
     def get_event_details(self) -> Tuple[str, List[str]]:
         title = f"{self.publisher_name.upper()} stopped publishing {self.symbol} for {self.stopped_slots} slots"
         details = [
-            f"Aggregate last slot: {self.price.aggregate.slot}"
-            f"Published last slot: {self.publisher_latest.slot}"
+            f"Aggregate last slot: {self.price.aggregate.pub_slot}"
+            f"Published last slot: {self.publisher_latest.pub_slot}"
         ]
         return title, details
 
@@ -279,7 +279,7 @@ class PublisherPriceFeedOffline(PriceValidationEvent):
     error_code: str = "publisher-price-feed-offline"
 
     def is_valid(self) -> bool:
-        self.slot_diff = self.price.slot - self.publisher_latest.slot
+        self.slot_diff = self.price.slot - self.publisher_latest.pub_slot
 
         if (
             self.slot_diff > MAX_SLOT_DIFFERENCE
@@ -296,7 +296,7 @@ class PublisherPriceFeedOffline(PriceValidationEvent):
         title = f"{self.publisher_key} {self.symbol} price feed is offline "
         title += "(has not updated its price in > 25 slots OR status is unknown)"
         details = [
-            f"Last Updated Slot: {self.publisher_latest.slot}",
+            f"Last Updated Slot: {self.publisher_latest.pub_slot}",
             f"Current Slot: {self.price.slot}",
             f"Status: {self.publisher_latest.price_status}",
         ]
@@ -490,7 +490,9 @@ class TWAPvsAggregate(PriceAccountValidationEvent):
     def get_event_details(self) -> Tuple[str, List[str]]:
         agg_price = self.price_account.aggregate_price
 
-        title = f"{self.symbol} Aggregate is {self.deviation:.0f}% different than TWAP"
+        title = (
+            f"{self.symbol} Aggregate is {self.deviation:.0f}% different than EMA Price"
+        )
         details = [
             f"TWAP: {self.twap:.3f} (slot {self.price_account.slot})",
             f"Aggregate: {agg_price:.3f} (slot {self.price_account.aggregate_price_info.pub_slot})",
