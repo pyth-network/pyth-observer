@@ -3,7 +3,7 @@ import datetime
 import pytz
 from typing import Tuple, List, Optional
 
-from pythclient.pythaccounts import TwEmaType, PythPriceStatus
+from pythclient.pythaccounts import EmaType, PythPriceStatus
 
 from pyth_observer.calendar import HolidayCalendar
 from pyth_observer.coingecko import get_coingecko_market_id
@@ -18,7 +18,7 @@ price_account_validators = []
 calendar = HolidayCalendar()
 
 MAX_SLOT_DIFFERENCE = 25
-TZ = pytz.timezone('America/New_York')
+TZ = pytz.timezone("America/New_York")
 
 
 class RegisterValidator(type):
@@ -115,7 +115,7 @@ class PriceAccountValidationEvent(ValidationEvent, metaclass=RegisterValidator):
         """
         For converting raw_* to the more human friendly versions
         """
-        return num * (10 ** exponent)
+        return num * (10**exponent)
 
 
 class BadConfidence(PriceValidationEvent):
@@ -171,9 +171,11 @@ class ImprobableAggregate(PriceValidationEvent):
             # The normalized confidence
             self.confidence = abs(delta / self.publisher_aggregate.confidence_interval)
 
-            if (self.price.is_publishing(self.publisher_key) and
-                    self.price.is_aggregate_publishing() and
-                    self.confidence > self.threshold):
+            if (
+                self.price.is_publishing(self.publisher_key)
+                and self.price.is_aggregate_publishing()
+                and self.confidence > self.threshold
+            ):
                 return False
         return True
 
@@ -215,9 +217,11 @@ class PriceDeviation(PriceValidationEvent):
 
         self.deviation = abs(delta / self.price.aggregate.price) * 100
 
-        if (self.price.is_publishing(self.publisher_key) and
-                self.price.is_aggregate_publishing() and
-                self.deviation > self.threshold):
+        if (
+            self.price.is_publishing(self.publisher_key)
+            and self.price.is_aggregate_publishing()
+            and self.deviation > self.threshold
+        ):
             return False
         return True
 
@@ -237,18 +241,22 @@ class StoppedPublishing(PriceValidationEvent):
     When a price has stopped being published for at least 600 slots but
     less than 1000 slots.
     """
+
     error_code: str = "stop-publishing-about-5-mins"
     threshold_min = int(os.environ.get("PYTH_OBSERVER_STOP_PUBLISHING_MIN_SLOTS", 600))
     threshold_max = int(os.environ.get("PYTH_OBSERVER_STOP_PUBLISHING_MAX_SLOTS", 1000))
 
     def is_valid(self) -> bool:
-        aggregate = self.price.aggregate.slot
-        published = self.publisher_latest.slot
+        aggregate = self.price.aggregate.pub_slot
+        published = self.publisher_latest.pub_slot
 
         # >= 600 && < 1000 is bad
         self.stopped_slots = aggregate - published
 
-        if self.stopped_slots >= self.threshold_min and self.stopped_slots < self.threshold_max:
+        if (
+            self.stopped_slots >= self.threshold_min
+            and self.stopped_slots < self.threshold_max
+        ):
             return False
         return True
 
@@ -267,14 +275,19 @@ class PublisherPriceFeedOffline(PriceValidationEvent):
     updating, but isn't. It alerts when a publisher price hasn't updated its
     price in > 25 slots OR its status is unknown.
     """
+
     error_code: str = "publisher-price-feed-offline"
 
     def is_valid(self) -> bool:
         self.slot_diff = self.price.slot - self.publisher_latest.slot
 
-        if self.slot_diff > MAX_SLOT_DIFFERENCE or self.publisher_latest.price_status != PythPriceStatus.TRADING:
+        if (
+            self.slot_diff > MAX_SLOT_DIFFERENCE
+            or self.publisher_latest.price_status != PythPriceStatus.TRADING
+        ):
             market_open = calendar.is_market_open(
-                self.price.product_attrs['asset_type'], datetime.datetime.now(tz=TZ))
+                self.price.product_attrs["asset_type"], datetime.datetime.now(tz=TZ)
+            )
             if market_open:
                 return False
         return True
@@ -285,7 +298,7 @@ class PublisherPriceFeedOffline(PriceValidationEvent):
         details = [
             f"Last Updated Slot: {self.publisher_latest.slot}",
             f"Current Slot: {self.price.slot}",
-            f"Status: {self.publisher_latest.price_status}"
+            f"Status: {self.publisher_latest.price_status}",
         ]
         return title, details
 
@@ -305,15 +318,23 @@ class PriceFeedOffline(PriceAccountValidationEvent):
     isn't. It alerts when a price hasn't updated its price in > 25 slots OR
     its status is unknown.
     """
+
     error_code: str = "price-feed-offline"
 
     def is_valid(self) -> bool:
-        self.slot_diff = self.price_account.slot - self.price_account.aggregate_price_info.slot
-        trading = self.price_account.aggregate_price_info.price_status == PythPriceStatus.TRADING
+        self.slot_diff = (
+            self.price_account.slot - self.price_account.aggregate_price_info.pub_slot
+        )
+        trading = (
+            self.price_account.aggregate_price_info.price_status
+            == PythPriceStatus.TRADING
+        )
 
         if self.slot_diff > MAX_SLOT_DIFFERENCE or not trading:
             market_open = calendar.is_market_open(
-                self.price_account.product.attrs['asset_type'], datetime.datetime.now(tz=TZ))
+                self.price_account.product.attrs["asset_type"],
+                datetime.datetime.now(tz=TZ),
+            )
             if market_open:
                 return False
         return True
@@ -322,9 +343,9 @@ class PriceFeedOffline(PriceAccountValidationEvent):
         title = f"{self.symbol} price feed is offline (has not updated its"
         title += " price in > 25 slots OR status is unknown)"
         details = [
-            f"Last Updated Slot: {self.price_account.aggregate_price_info.slot}",
+            f"Last Updated Slot: {self.price_account.aggregate_price_info.pub_slot}",
             f"Current Slot: {self.price_account.slot}",
-            f"Status: {self.price_account.aggregate_price_info.price_status}"
+            f"Status: {self.price_account.aggregate_price_info.price_status}",
         ]
         return title, details
 
@@ -341,8 +362,11 @@ class LongDurationPriceFeedOffline(PriceAccountValidationEvent):
     It alerts when a price hasn't updated in > PYTH_OBSERVER_STOP_PUBLISHING_MIN_SLOTS (default 600) slots.
     This alert requires a longer offline duration than PriceFeedOffline.
     """
+
     error_code: str = "long-price-feed-offline"
-    threshold_slots: int = int(os.environ.get("PYTH_OBSERVER_STOP_PUBLISHING_MIN_SLOTS", 600))
+    threshold_slots: int = int(
+        os.environ.get("PYTH_OBSERVER_STOP_PUBLISHING_MIN_SLOTS", 600)
+    )
 
     def is_valid(self) -> bool:
         # The aggregate's slot field updates even when the status=UNKNOWN, but each publisher's slot
@@ -357,9 +381,14 @@ class LongDurationPriceFeedOffline(PriceAccountValidationEvent):
         min_publishers = self.price_account.min_publishers
 
         # min_publishers >= 10 means the feed is "coming soon". We expect it to be offline.
-        if active_publishers < self.price_account.min_publishers and min_publishers < 10:
+        if (
+            active_publishers < self.price_account.min_publishers
+            and min_publishers < 10
+        ):
             market_open = calendar.is_market_open(
-                self.price_account.product.attrs['asset_type'], datetime.datetime.now(tz=TZ))
+                self.price_account.product.attrs["asset_type"],
+                datetime.datetime.now(tz=TZ),
+            )
             if market_open:
                 return False
         return True
@@ -367,7 +396,10 @@ class LongDurationPriceFeedOffline(PriceAccountValidationEvent):
     def _get_num_active_publishers(self) -> int:
         active_publishers = 0
         for component in self.price_account.price_components:
-            stopped_slots = self.price_account.last_slot - component.last_aggregate_price_info.slot
+            stopped_slots = (
+                self.price_account.last_slot
+                - component.last_aggregate_price_info.pub_slot
+            )
             if stopped_slots < self.threshold_slots:
                 active_publishers += 1
 
@@ -378,7 +410,7 @@ class LongDurationPriceFeedOffline(PriceAccountValidationEvent):
         title = f"{self.symbol} price feed is offline (no update for > {self.threshold_slots} slots)"
         details = [
             f"Current Slot: {self.price_account.slot}",
-            f"Status: {self.price_account.aggregate_price_info.price_status}"
+            f"Status: {self.price_account.aggregate_price_info.price_status}",
         ]
         return title, details
 
@@ -388,7 +420,7 @@ class NegativeTWAP(PriceAccountValidationEvent):
 
     def is_valid(self) -> bool:
         self.twap = self.convert_raw(
-            self.price_account.derivations[TwEmaType.TWAPVALUE],
+            self.price_account.derivations[EmaType.EMA_PRICE_VALUE],
             self.price_account.exponent,
         )
         return self.twap >= 0
@@ -399,7 +431,7 @@ class NegativeTWAP(PriceAccountValidationEvent):
         title = f"{self.symbol} negative TWAP"
         details = [
             f"TWAP: {self.twap:.3f} (slot {self.price_account.slot})",
-            f"Aggregate: {agg_price:.3f} (slot {self.price_account.aggregate_price_info.slot})",
+            f"Aggregate: {agg_price:.3f} (slot {self.price_account.aggregate_price_info.pub_slot})",
         ]
         return title, details
 
@@ -409,7 +441,7 @@ class NegativeTWAC(PriceAccountValidationEvent):
 
     def is_valid(self) -> bool:
         self.twac = self.convert_raw(
-            self.price_account.derivations[TwEmaType.TWACVALUE],
+            self.price_account.derivations[EmaType.EMA_CONFIDENCE_VALUE],
             self.price_account.exponent,
         )
         return self.twac >= 0
@@ -420,7 +452,7 @@ class NegativeTWAC(PriceAccountValidationEvent):
         title = f"{self.symbol} negative TWAC"
         details = [
             f"TWAC: {self.twac:.3f} (slot {self.price_account.slot})",
-            f"Aggregate: {agg_price:.3f} (slot {self.price_account.aggregate_price_info.slot})",
+            f"Aggregate: {agg_price:.3f} (slot {self.price_account.aggregate_price_info.pub_slot})",
         ]
         return title, details
 
@@ -430,15 +462,20 @@ class TWAPvsAggregate(PriceAccountValidationEvent):
     When the TWAP and Aggregate are significantly off, it is due to
     something wonky or big price moves.
     """
+
     error_code: str = "twap-vs-aggregate-price"
-    threshold = int(os.environ.get('PYTH_OBSERVER_TWAP_VS_AGGREGATE_THRESHOLD', 10))
+    threshold = int(os.environ.get("PYTH_OBSERVER_TWAP_VS_AGGREGATE_THRESHOLD", 10))
 
     def is_valid(self) -> bool:
         self.twap = self.convert_raw(
-            num=self.price_account.derivations[TwEmaType.TWAPVALUE],
+            num=self.price_account.derivations[EmaType.EMA_PRICE_VALUE],
             exponent=self.price_account.exponent,
         )
         aggregate_price = self.price_account.aggregate_price
+
+        # aggregate price is not currently available
+        if not aggregate_price:
+            return True
 
         try:
             self.deviation = 100 * abs(self.twap - aggregate_price) / aggregate_price
@@ -456,7 +493,7 @@ class TWAPvsAggregate(PriceAccountValidationEvent):
         title = f"{self.symbol} Aggregate is {self.deviation:.0f}% different than TWAP"
         details = [
             f"TWAP: {self.twap:.3f} (slot {self.price_account.slot})",
-            f"Aggregate: {agg_price:.3f} (slot {self.price_account.aggregate_price_info.slot})",
+            f"Aggregate: {agg_price:.3f} (slot {self.price_account.aggregate_price_info.pub_slot})",
         ]
         return title, details
 
@@ -465,11 +502,15 @@ class PriceDeviationCoinGecko(PriceAccountValidationEvent):
     """
     This alert is supposed to fire when a price feed deviates from CoinGecko price feed by a specified threshold.
     """
+
     error_code: str = "price-deviation-coingecko"
-    threshold = int(os.environ.get('PYTH_OBSERVER_PRICE_DEVIATION_COINGECKO', 5))
+    threshold = int(os.environ.get("PYTH_OBSERVER_PRICE_DEVIATION_COINGECKO", 5))
 
     def is_valid(self) -> bool:
-        trading = self.price_account.aggregate_price_info.price_status == PythPriceStatus.TRADING
+        trading = (
+            self.price_account.aggregate_price_info.price_status
+            == PythPriceStatus.TRADING
+        )
         pyth_price = self.price_account.aggregate_price_info.price
 
         if not trading or self.coingecko_price is None or pyth_price == 0:
@@ -477,7 +518,8 @@ class PriceDeviationCoinGecko(PriceAccountValidationEvent):
             return True
 
         self.coingecko_deviation = (
-            abs(pyth_price - self.coingecko_price['usd']) / self.coingecko_price['usd']) * 100.0
+            abs(pyth_price - self.coingecko_price["usd"]) / self.coingecko_price["usd"]
+        ) * 100.0
 
         # Pyth price is more than a specified threshold percentage off CoinGecko's price
         if self.coingecko_deviation > self.threshold:
@@ -486,12 +528,12 @@ class PriceDeviationCoinGecko(PriceAccountValidationEvent):
 
     def get_event_details(self) -> Tuple[str, List[str]]:
         title = f"{self.symbol} is more than {self.threshold}% off from CoinGecko"
-        coin_name = get_coingecko_market_id(self.price_account.product.attrs['base'])
+        coin_name = get_coingecko_market_id(self.price_account.product.attrs["base"])
         url = f"https://www.coingecko.com/en/coins/{coin_name}"
         details = [
             f"Pyth Price: {self.price_account.aggregate_price_info.price}",
             f"CoinGecko Price: {self.coingecko_price['usd']}",
             f"Deviation: {self.coingecko_deviation}% off",
-            f"CoinGecko Price Chart: {url}"
+            f"CoinGecko Price Chart: {url}",
         ]
         return title, details

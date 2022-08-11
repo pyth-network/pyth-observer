@@ -6,7 +6,7 @@ pycoingecko==2.2.0
 
 # Testing
 pytest
-pythclient==0.0.2
+pythclient==0.1.2
 prometheus-client==0.12.0
 typing-extensions==3.10.0.2
 pytest-mock

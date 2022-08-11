@@ -67,7 +67,7 @@ class Price:
         if publisher_aggregate is None:
             return False
 
-        slot_diff = self.slot - publisher_aggregate.slot
+        slot_diff = self.slot - publisher_aggregate.pub_slot
 
         return all(
             [
