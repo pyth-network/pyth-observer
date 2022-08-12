@@ -1,6 +1,11 @@
 import pytest
 from pyth_observer.events import TWAPvsAggregate
-from pythclient.pythaccounts import EmaType, PythPriceType, PythPriceInfo, PythPriceStatus
+from pythclient.pythaccounts import (
+    EmaType,
+    PythPriceType,
+    PythPriceInfo,
+    PythPriceStatus,
+)
 from typing import List, Dict, Tuple, Optional, Any
 
 
@@ -37,10 +42,13 @@ def check_average(twap, aggregate, exponent, expected_str):
     else:
         assert result
 
+
 def test_averages():
     # within 10%
     check_average(49132540, 48121502, 3, None)
     # outside 10%
-    check_average(49132540, 43121502, 3, "ZZZT Aggregate is 14% different than EMA Price")
+    check_average(
+        49132540, 43121502, 3, "ZZZT Aggregate is 14% different than EMA Price"
+    )
     # 0.0 aggregate happens occasionally when a publisher publishes bad data
     check_average(49132540, 0.0, 3, None)
