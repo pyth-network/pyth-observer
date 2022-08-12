@@ -21,10 +21,10 @@ def check_price_deviation_coingecko(aggregate_price, coingecko_price, product_at
     network = "mainnet"
     symbol = "ZZZT"
 
-    validation = PriceDeviationCoinGecko(None, None, pa, network, symbol)
+    # coingecko_price["last_updated_at"] must be > coingecko_price_last_updated_at otherwise price is stale and it will be considered as valid
+    validation = PriceDeviationCoinGecko(None, None, pa, network, symbol, {'usd': coingecko_price, 'last_updated_at': 2}, 1)
     # Set the firing threshold to 5% for testing
     validation.threshold = 5
-    validation.coingecko_price = {'usd': coingecko_price}
     result = validation.is_valid()
 
     if not result:
