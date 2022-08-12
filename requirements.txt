@@ -3,6 +3,7 @@ dnspython
 loguru
 pytz
 pycoingecko==2.2.0
+throttler==1.2.1
 
 # Testing
 pytest

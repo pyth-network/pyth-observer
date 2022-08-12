@@ -39,6 +39,10 @@
         "api": "bitcoin-cash",
         "market": "bitcoin-cash"
     },
+    "BETH": {
+        "api": "binance-eth",
+        "market": "binance-eth-staking"
+    },
     "BNB": {
         "api": "binancecoin",
         "market": "bnb"

@@ -54,6 +54,7 @@ class ValidationEvent:
         network=None,
         symbol=None,
         coingecko_price=None,
+        coingecko_price_last_updated_at=None,
     ) -> None:
         self.price = price
         self.symbol = symbol
@@ -61,6 +62,7 @@ class ValidationEvent:
         self.price_account = price_account
         self.publisher_key = publisher_key
         self.coingecko_price = coingecko_price
+        self.coingecko_price_last_updated_at = coingecko_price_last_updated_at
         self.creation_time = datetime.datetime.now()
 
         if publisher_key:
@@ -508,14 +510,22 @@ class PriceDeviationCoinGecko(PriceAccountValidationEvent):
     error_code: str = "price-deviation-coingecko"
     threshold = int(os.environ.get("PYTH_OBSERVER_PRICE_DEVIATION_COINGECKO", 5))
 
-    def is_valid(self) -> bool:
+    def is_valid(self) -> bool:   
+        # check if coingecko price exists or if it's the first time we're checking this price feed against coingecko
+        if not self.coingecko_price or not self.coingecko_price_last_updated_at:
+            return True
+        
+        # check if coingecko price is stale, we don't want to alert on stale prices
+        if self.coingecko_price["last_updated_at"] <= self.coingecko_price_last_updated_at:
+            return True
+
         trading = (
             self.price_account.aggregate_price_info.price_status
             == PythPriceStatus.TRADING
         )
         pyth_price = self.price_account.aggregate_price_info.price
 
-        if not trading or self.coingecko_price is None or pyth_price == 0:
+        if not trading or pyth_price == 0:
             # TODO: add another alert that checks if coingecko is down
             return True
 
@@ -532,9 +542,11 @@ class PriceDeviationCoinGecko(PriceAccountValidationEvent):
         title = f"{self.symbol} is more than {self.threshold}% off from CoinGecko"
         coin_name = get_coingecko_market_id(self.price_account.product.attrs["base"])
         url = f"https://www.coingecko.com/en/coins/{coin_name}"
+        last_updated_at = self.coingecko_price["last_updated_at"]
         details = [
             f"Pyth Price: {self.price_account.aggregate_price_info.price}",
             f"CoinGecko Price: {self.coingecko_price['usd']}",
+            f"CoinGecko Price Last Updated At: {last_updated_at}",
             f"Deviation: {self.coingecko_deviation}% off",
             f"CoinGecko Price Chart: {url}",
         ]

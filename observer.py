@@ -80,6 +80,7 @@ async def main(args):
 
     publishers = get_publishers(args.network)
     coingecko_prices = {}
+    coingecko_prices_last_updated_at = {}
     gprice = Gauge(
         "crypto_price", "Price", labelnames=["symbol", "publisher", "status"]
     )
@@ -87,6 +88,7 @@ async def main(args):
     notifiers = init_notifiers(args.notifier)
 
     async def run_alerts():
+        nonlocal coingecko_prices_last_updated_at
         async with PythClient(
             solana_endpoint=http_url,
             solana_ws_endpoint=ws_url,
@@ -116,12 +118,12 @@ async def main(args):
                     )
                     asyncio.sleep(0.4)
                     continue
-
+            
                 for product in products:
                     errors = []
                     symbol = product.symbol
                     coingecko_price = coingecko_prices.get(product.attrs["base"])
-
+                    coingecko_price_last_updated_at = coingecko_prices_last_updated_at.get(product.attrs["base"])
                     # prevent adding duplicate symbols
                     if symbol not in validators:
                         # TODO: If publisher_key is not None, then only do validation for that publisher
@@ -130,6 +132,7 @@ async def main(args):
                             network=args.network,
                             symbol=symbol,
                             coingecko_price=coingecko_price,
+                            coingecko_price_last_updated_at=coingecko_price_last_updated_at
                         )
                     prices = await product.get_prices()
 
@@ -143,6 +146,7 @@ async def main(args):
                         price_account_errors = validators[symbol].verify_price_account(
                             price_account=price_account,
                             coingecko_price=coingecko_price,
+                            coingecko_price_last_updated_at=coingecko_price_last_updated_at,
                             include_noisy=args.include_noisy_alerts,
                         )
                         if price_account_errors:
@@ -181,13 +185,15 @@ async def main(args):
                         notifiers,
                         notification_mins=args.notification_snooze_mins,
                     )
+                    if product.attrs["asset_type"] == 'Crypto':
+                        # check if coingecko price exists
+                        coingecko_prices_last_updated_at[product.attrs["base"]] = coingecko_price and coingecko_price['last_updated_at']
                 await asyncio.sleep(0.4)
 
     async def run_coingecko_get_price():
         nonlocal coingecko_prices
         while True:
-            coingecko_prices = get_coingecko_prices([x for x in symbol_to_id_mapping])
-            await asyncio.sleep(3)
+            coingecko_prices = await get_coingecko_prices([x for x in symbol_to_id_mapping])
 
     await asyncio.gather(run_alerts(), run_coingecko_get_price())
 
