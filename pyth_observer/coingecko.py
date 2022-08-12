@@ -23,6 +23,7 @@ api_to_symbol_mapping = {
     symbol_to_id_mapping[x]["api"]: x for x in symbol_to_id_mapping
 }
 
+
 # CoinGecko free API limit: 10-50 (varies) https://www.coingecko.com/en/api/pricing
 # However prices are updated every 1-10 minutes: https://www.coingecko.com/en/faq
 # Hence we only have to query once every minute.

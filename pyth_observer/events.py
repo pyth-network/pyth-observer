@@ -511,7 +511,8 @@ class PriceDeviationCoinGecko(PriceAccountValidationEvent):
     threshold = int(os.environ.get("PYTH_OBSERVER_PRICE_DEVIATION_COINGECKO", 5))
 
     def is_valid(self) -> bool:
-        # check if coingecko price exists or if it's the first time we're checking this price feed against coingecko
+        # check if coingecko price exists or
+        # if it's the first time we're checking this price feed against coingecko
         if not self.coingecko_price or not self.coingecko_price_last_updated_at:
             return True
 
