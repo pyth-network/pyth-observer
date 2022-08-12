@@ -118,12 +118,14 @@ async def main(args):
                     )
                     asyncio.sleep(0.4)
                     continue
-            
+
                 for product in products:
                     errors = []
                     symbol = product.symbol
                     coingecko_price = coingecko_prices.get(product.attrs["base"])
-                    coingecko_price_last_updated_at = coingecko_prices_last_updated_at.get(product.attrs["base"])
+                    coingecko_price_last_updated_at = (
+                        coingecko_prices_last_updated_at.get(product.attrs["base"])
+                    )
                     # prevent adding duplicate symbols
                     if symbol not in validators:
                         # TODO: If publisher_key is not None, then only do validation for that publisher
@@ -132,7 +134,7 @@ async def main(args):
                             network=args.network,
                             symbol=symbol,
                             coingecko_price=coingecko_price,
-                            coingecko_price_last_updated_at=coingecko_price_last_updated_at
+                            coingecko_price_last_updated_at=coingecko_price_last_updated_at,
                         )
                     prices = await product.get_prices()
 
@@ -185,15 +187,19 @@ async def main(args):
                         notifiers,
                         notification_mins=args.notification_snooze_mins,
                     )
-                    if product.attrs["asset_type"] == 'Crypto':
+                    if product.attrs["asset_type"] == "Crypto":
                         # check if coingecko price exists
-                        coingecko_prices_last_updated_at[product.attrs["base"]] = coingecko_price and coingecko_price['last_updated_at']
+                        coingecko_prices_last_updated_at[product.attrs["base"]] = (
+                            coingecko_price and coingecko_price["last_updated_at"]
+                        )
                 await asyncio.sleep(0.4)
 
     async def run_coingecko_get_price():
         nonlocal coingecko_prices
         while True:
-            coingecko_prices = await get_coingecko_prices([x for x in symbol_to_id_mapping])
+            coingecko_prices = await get_coingecko_prices(
+                [x for x in symbol_to_id_mapping]
+            )
 
     await asyncio.gather(run_alerts(), run_coingecko_get_price())
 
