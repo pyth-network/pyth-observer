@@ -80,6 +80,7 @@ async def main(args):
 
     publishers = get_publishers(args.network)
     coingecko_prices = {}
+    coingecko_prices_last_updated_at = {}
     gprice = Gauge(
         "crypto_price", "Price", labelnames=["symbol", "publisher", "status"]
     )
@@ -87,6 +88,7 @@ async def main(args):
     notifiers = init_notifiers(args.notifier)
 
     async def run_alerts():
+        nonlocal coingecko_prices_last_updated_at
         async with PythClient(
             solana_endpoint=http_url,
             solana_ws_endpoint=ws_url,
@@ -101,7 +103,9 @@ async def main(args):
                 try:
                     await c.refresh_all_prices()
                 except (ClientConnectorError, SolanaException) as exc:
-                    logger.error("{} refreshing prices: {}", exc.__class__.__name__, exc)
+                    logger.error(
+                        "{} refreshing prices: {}", exc.__class__.__name__, exc
+                    )
                     asyncio.sleep(0.4)
                     continue
 
@@ -109,15 +113,19 @@ async def main(args):
                 try:
                     products = await c.get_products()
                 except (ClientConnectorError, SolanaException) as exc:
-                    logger.error("{} refreshing prices: {}", exc.__class__.__name__, exc)
+                    logger.error(
+                        "{} refreshing prices: {}", exc.__class__.__name__, exc
+                    )
                     asyncio.sleep(0.4)
                     continue
 
                 for product in products:
                     errors = []
                     symbol = product.symbol
-                    coingecko_price = coingecko_prices.get(product.attrs['base'])
-
+                    coingecko_price = coingecko_prices.get(product.attrs["base"])
+                    coingecko_price_last_updated_at = (
+                        coingecko_prices_last_updated_at.get(product.attrs["base"])
+                    )
                     # prevent adding duplicate symbols
                     if symbol not in validators:
                         # TODO: If publisher_key is not None, then only do validation for that publisher
@@ -125,7 +133,8 @@ async def main(args):
                             key=args.publisher_key,
                             network=args.network,
                             symbol=symbol,
-                            coingecko_price=coingecko_price
+                            coingecko_price=coingecko_price,
+                            coingecko_price_last_updated_at=coingecko_price_last_updated_at,
                         )
                     prices = await product.get_prices()
 
@@ -139,6 +148,7 @@ async def main(args):
                         price_account_errors = validators[symbol].verify_price_account(
                             price_account=price_account,
                             coingecko_price=coingecko_price,
+                            coingecko_price_last_updated_at=coingecko_price_last_updated_at,
                             include_noisy=args.include_noisy_alerts,
                         )
                         if price_account_errors:
@@ -168,20 +178,28 @@ async def main(args):
                         if price_errors:
                             errors.extend(price_errors)
 
-                    filtered_errors = filter_errors(args.ignore, errors) if args.ignore else errors
+                    filtered_errors = (
+                        filter_errors(args.ignore, errors) if args.ignore else errors
+                    )
                     # Send all notifications for a given symbol pair
                     await validators[symbol].notify(
                         filtered_errors,
                         notifiers,
                         notification_mins=args.notification_snooze_mins,
                     )
+                    if product.attrs["asset_type"] == "Crypto":
+                        # check if coingecko price exists
+                        coingecko_prices_last_updated_at[product.attrs["base"]] = (
+                            coingecko_price and coingecko_price["last_updated_at"]
+                        )
                 await asyncio.sleep(0.4)
 
     async def run_coingecko_get_price():
         nonlocal coingecko_prices
         while True:
-            coingecko_prices = get_coingecko_prices([x for x in symbol_to_id_mapping])
-            await asyncio.sleep(2)
+            coingecko_prices = await get_coingecko_prices(
+                [x for x in symbol_to_id_mapping]
+            )
 
     await asyncio.gather(run_alerts(), run_coingecko_get_price())
 
@@ -202,7 +220,7 @@ if __name__ == "__main__":
         "-n",
         "--network",
         action="store",
-        choices=["devnet", "mainnet", "testnet"],
+        choices=["devnet", "mainnet", "testnet", "pythtest", "pythnet"],
         default="devnet",
     )
     parser.add_argument(
@@ -252,15 +270,15 @@ if __name__ == "__main__":
         "--ignore",
         nargs="+",
         help="List of symbols and / or events to ignore. "
-             "For e.g. 'Crypto.ORCA/USD' to ignore all ORCA alerts and "
-             "'FX.*/price-feed-offline' to ignore all price-feed-offline "
-             "alerts for all FX pairs",
+        "For e.g. 'Crypto.ORCA/USD' to ignore all ORCA alerts and "
+        "'FX.*/price-feed-offline' to ignore all price-feed-offline "
+        "alerts for all FX pairs",
     )
     parser.add_argument(
         "--notifier",
         action="append",
         help="Specify a notification system to be used.  Parameters can be "
-             "passed to the notifier by separating with an equals sign",
+        "passed to the notifier by separating with an equals sign",
     )
     args = parser.parse_args()
 
@@ -269,7 +287,7 @@ if __name__ == "__main__":
     if not args.notifier:
         if args.slack_webhook_url is not None:
             slack = args.slack_webhook_url
-            args.notifier = [f'pyth_observer.notifiers.slack={slack}']
+            args.notifier = [f"pyth_observer.notifiers.slack={slack}"]
         else:
             args.notifier = ["pyth_observer.notifiers.logger"]
 
