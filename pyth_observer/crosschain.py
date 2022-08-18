@@ -18,7 +18,10 @@ def get_crosschain_symbol_to_pubkey_mapping():
 
 symbol_to_pubkey_mapping = get_crosschain_symbol_to_pubkey_mapping()
 
-# We have an attester that sends the prices to wormhole to be verified. Currently it sends prices to wormhole every one minute, due to costs. We can increase the frequency of the attester once we're live on pythnet.
+
+# We have an attester that sends the prices to wormhole to be verified.
+# Currently it sends prices to wormhole every one minute, due to costs.
+# We can increase the frequency of the attester once we're live on pythnet.
 @throttle(rate_limit=1, period=60)
 async def get_crosschain_prices():
     query_params = "ids[]=" + "&ids[]=".join(symbol_to_pubkey_mapping.values())

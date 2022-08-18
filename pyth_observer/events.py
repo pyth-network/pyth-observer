@@ -561,7 +561,8 @@ class PriceDeviationCoinGecko(PriceAccountValidationEvent):
 
 class PriceDeviationCrosschain(PriceAccountValidationEvent):
     """
-    This alert is supposed to fire when a cross-chain price feed deviates from Solana price feed by a specified threshold.
+    This alert is supposed to fire when a cross-chain price feed deviates
+    from Solana price feed by a specified threshold.
     """
 
     error_code: str = "price-deviation-cross-chain"
@@ -596,10 +597,14 @@ class PriceDeviationCrosschain(PriceAccountValidationEvent):
         return True
 
     def get_event_details(self) -> Tuple[str, List[str]]:
-        title = f"Cross-chain {self.symbol} is more than {self.threshold} confidence intervals away from Solana {self.symbol}"
+        title = (
+            f"Cross-chain {self.symbol} is more than {self.threshold}"
+            + f" confidence intervals away from Solana {self.symbol}"
+        )
         details = [
             f"Cross-chain price: {self.crosschain_price['price']:.4f}, conf: {self.crosschain_price['conf']:.4f}",
-            f"Solana price: {self.price_account.aggregate_price_info.price:.4f}, conf: {self.price_account.aggregate_price_info.confidence_interval:.4f}",
+            f"Solana price: {self.price_account.aggregate_price_info.price:.4f},"
+            + f" conf: {self.price_account.aggregate_price_info.confidence_interval:.4f}",
             f"Deviation: {self.crosschain_deviation:.4f} conf intervals away",
         ]
         return title, details

@@ -7,7 +7,6 @@ import re
 import sys
 import importlib
 import base58
-import requests
 
 from aiohttp import ClientConnectorError
 from loguru import logger
@@ -131,7 +130,9 @@ async def main(args):
                     coingecko_price_last_updated_at = (
                         coingecko_prices_last_updated_at.get(product.attrs["base"])
                     )
-                    crosschain_price = crosschain_prices.get(base58.b58decode(product.first_price_account_key.key).hex())
+                    crosschain_price = crosschain_prices.get(
+                        base58.b58decode(product.first_price_account_key.key).hex()
+                    )
                     # prevent adding duplicate symbols
                     if symbol not in validators:
                         # TODO: If publisher_key is not None, then only do validation for that publisher
@@ -217,8 +218,6 @@ async def main(args):
             crosschain_prices = await get_crosschain_prices()
             # for product in products:
             #     price_account_key = base58.b58decode(product.first_price_account_key.key).hex()
-
-                
 
     await asyncio.gather(
         run_alerts(), run_coingecko_get_price(), run_crosschain_get_price()
