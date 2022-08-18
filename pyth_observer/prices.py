@@ -90,6 +90,7 @@ class PriceValidator:
         symbol: Optional[str] = None,
         coingecko_price: Optional[Dict] = None,
         coingecko_price_last_updated_at: Optional[Dict] = None,
+        crosschain_price: Optional[Dict] = None,
     ):
         self.publisher_key = key
         self.symbol = symbol
@@ -98,6 +99,7 @@ class PriceValidator:
         self.events = defaultdict(dict)
         self.coingecko_price = coingecko_price
         self.coingecko_price_last_updated_at = coingecko_price_last_updated_at
+        self.crosschain_price = crosschain_price
 
     def update_slot(self, slot: Optional[int]) -> None:
         """
@@ -126,6 +128,14 @@ class PriceValidator:
             return
         self.coingecko_price_last_updated_at = coingecko_price_last_updated_at
 
+    def update_crosschain_price(self, crosschain_price: Optional[float]) -> None:
+        """
+        Update the `crosschain_price` attribute
+        """
+        if crosschain_price is None:
+            return
+        self.crosschain_price = crosschain_price
+
     def update_events(self, event) -> None:
         if event.unique_id not in self.events:
             self.events[event.unique_id] = {
@@ -144,11 +154,13 @@ class PriceValidator:
         price_account: PythPriceAccount,
         coingecko_price=None,
         coingecko_price_last_updated_at=None,
+        crosschain_price=None,
         include_noisy=False,
     ) -> Optional[List[ValidationEvent]]:
         self.update_slot(price_account.slot)
         self.update_coingecko_price(coingecko_price)
         self.update_coingecko_price_last_updated_at(coingecko_price_last_updated_at)
+        self.update_crosschain_price(crosschain_price)
 
         errors = []
         for validator in price_account_validators:
@@ -159,6 +171,7 @@ class PriceValidator:
                 symbol=self.symbol,
                 coingecko_price=self.coingecko_price,
                 coingecko_price_last_updated_at=self.coingecko_price_last_updated_at,
+                crosschain_price=self.crosschain_price,
             )
             if include_noisy is False and check.is_noisy():
                 continue

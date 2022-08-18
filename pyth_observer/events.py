@@ -55,6 +55,7 @@ class ValidationEvent:
         symbol=None,
         coingecko_price=None,
         coingecko_price_last_updated_at=None,
+        crosschain_price=None,
     ) -> None:
         self.price = price
         self.symbol = symbol
@@ -63,6 +64,7 @@ class ValidationEvent:
         self.publisher_key = publisher_key
         self.coingecko_price = coingecko_price
         self.coingecko_price_last_updated_at = coingecko_price_last_updated_at
+        self.crosschain_price = crosschain_price
         self.creation_time = datetime.datetime.now()
 
         if publisher_key:
@@ -244,7 +246,7 @@ class StoppedPublishing(PriceValidationEvent):
     less than 1000 slots.
     """
 
-    error_code: str = "stop-publishing-about-5-mins"
+    error_code: str = "stopped-publishing-about-5-mins"
     threshold_min = int(os.environ.get("PYTH_OBSERVER_STOP_PUBLISHING_MIN_SLOTS", 600))
     threshold_max = int(os.environ.get("PYTH_OBSERVER_STOP_PUBLISHING_MAX_SLOTS", 1000))
 
@@ -265,8 +267,8 @@ class StoppedPublishing(PriceValidationEvent):
     def get_event_details(self) -> Tuple[str, List[str]]:
         title = f"{self.publisher_name.upper()} stopped publishing {self.symbol} for {self.stopped_slots} slots"
         details = [
-            f"Aggregate last slot: {self.price.aggregate.pub_slot}"
-            f"Published last slot: {self.publisher_latest.pub_slot}"
+            f"Aggregate last slot: {self.price.aggregate.pub_slot}",
+            f"Published last slot: {self.publisher_latest.pub_slot}",
         ]
         return title, details
 
@@ -553,5 +555,51 @@ class PriceDeviationCoinGecko(PriceAccountValidationEvent):
             f"CoinGecko Price Last Updated At: {last_updated_at}",
             f"Deviation: {self.coingecko_deviation}% off",
             f"CoinGecko Price Chart: {url}",
+        ]
+        return title, details
+
+
+class PriceDeviationCrosschain(PriceAccountValidationEvent):
+    """
+    This alert is supposed to fire when a cross-chain price feed deviates from Solana price feed by a specified threshold.
+    """
+
+    error_code: str = "price-deviation-cross-chain"
+    threshold = 20
+
+    def is_valid(self) -> bool:
+        # check if cross-chain price exists
+        if not self.crosschain_price:
+            return True
+
+        trading = (
+            self.price_account.aggregate_price_info.price_status
+            == PythPriceStatus.TRADING
+        )
+        pyth_price = self.price_account.aggregate_price_info.price
+
+        if not trading or pyth_price == 0:
+            return True
+
+        delta = abs(pyth_price - self.crosschain_price["price"])
+        self.crosschain_deviation = delta / self.crosschain_price["conf"]
+
+        # check for stale prices
+        if (
+            self.crosschain_price["publish_time"]
+            == self.crosschain_price["prev_publish_time"]
+        ):
+            return True
+
+        if self.crosschain_deviation > self.threshold:
+            return False
+        return True
+
+    def get_event_details(self) -> Tuple[str, List[str]]:
+        title = f"Cross-chain {self.symbol} is more than {self.threshold} confidence intervals away from Solana {self.symbol}"
+        details = [
+            f"Cross-chain price: {self.crosschain_price['price']:.4f}, conf: {self.crosschain_price['conf']:.4f}",
+            f"Solana price: {self.price_account.aggregate_price_info.price:.4f}, conf: {self.price_account.aggregate_price_info.confidence_interval:.4f}",
+            f"Deviation: {self.crosschain_deviation:.4f} conf intervals away",
         ]
         return title, details

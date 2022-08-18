@@ -6,6 +6,8 @@ import os
 import re
 import sys
 import importlib
+import base58
+import requests
 
 from aiohttp import ClientConnectorError
 from loguru import logger
@@ -16,6 +18,7 @@ from pythclient.ratelimit import RateLimit
 
 from pyth_observer import get_key, get_solana_urls
 from pyth_observer.coingecko import get_coingecko_prices, symbol_to_id_mapping
+from pyth_observer.crosschain import get_crosschain_prices
 from pyth_observer.prices import Price, PriceValidator
 
 logger.enable("pythclient")
@@ -79,8 +82,10 @@ async def main(args):
     http_url, ws_url = get_solana_urls(network=args.network)
 
     publishers = get_publishers(args.network)
+    products = {}
     coingecko_prices = {}
     coingecko_prices_last_updated_at = {}
+    crosschain_prices = {}
     gprice = Gauge(
         "crypto_price", "Price", labelnames=["symbol", "publisher", "status"]
     )
@@ -88,7 +93,7 @@ async def main(args):
     notifiers = init_notifiers(args.notifier)
 
     async def run_alerts():
-        nonlocal coingecko_prices_last_updated_at
+        nonlocal products, coingecko_prices_last_updated_at
         async with PythClient(
             solana_endpoint=http_url,
             solana_ws_endpoint=ws_url,
@@ -126,6 +131,7 @@ async def main(args):
                     coingecko_price_last_updated_at = (
                         coingecko_prices_last_updated_at.get(product.attrs["base"])
                     )
+                    crosschain_price = crosschain_prices.get(base58.b58decode(product.first_price_account_key.key).hex())
                     # prevent adding duplicate symbols
                     if symbol not in validators:
                         # TODO: If publisher_key is not None, then only do validation for that publisher
@@ -135,6 +141,7 @@ async def main(args):
                             symbol=symbol,
                             coingecko_price=coingecko_price,
                             coingecko_price_last_updated_at=coingecko_price_last_updated_at,
+                            crosschain_price=crosschain_price,
                         )
                     prices = await product.get_prices()
 
@@ -149,6 +156,7 @@ async def main(args):
                             price_account=price_account,
                             coingecko_price=coingecko_price,
                             coingecko_price_last_updated_at=coingecko_price_last_updated_at,
+                            crosschain_price=crosschain_price,
                             include_noisy=args.include_noisy_alerts,
                         )
                         if price_account_errors:
@@ -201,7 +209,20 @@ async def main(args):
                 [x for x in symbol_to_id_mapping]
             )
 
-    await asyncio.gather(run_alerts(), run_coingecko_get_price())
+    async def run_crosschain_get_price():
+        # sleep for 2 seconds to allow pyth-observer to load products for the first time
+        await asyncio.sleep(2)
+        nonlocal crosschain_prices
+        while True:
+            crosschain_prices = await get_crosschain_prices()
+            # for product in products:
+            #     price_account_key = base58.b58decode(product.first_price_account_key.key).hex()
+
+                
+
+    await asyncio.gather(
+        run_alerts(), run_coingecko_get_price(), run_crosschain_get_price()
+    )
 
 
 if __name__ == "__main__":
