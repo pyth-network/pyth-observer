@@ -1,5 +1,8 @@
+import pytest
+
 from pyth_observer.events import PriceDeviationCrosschain
 from pythclient.pythaccounts import PythPriceInfo, PythPriceStatus
+from pyth_observer.crosschain import get_crosschain_prices
 
 
 class MockPythProductAccount:
@@ -95,3 +98,9 @@ def test_price_deviation_crosschain():
         product_attrs,
         "Cross-chain ZZZT is more than 5 confidence intervals away from Solana ZZZT",
     )
+
+
+@pytest.mark.asyncio
+async def test_get_crosschain_prices():
+    crosschain_prices = await get_crosschain_prices()
+    assert crosschain_prices is not None

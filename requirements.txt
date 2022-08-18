@@ -7,6 +7,7 @@ throttler==1.2.1
 
 # Testing
 pytest
+pytest-asyncio
 pythclient==0.1.2
 prometheus-client==0.12.0
 typing-extensions==3.10.0.2
