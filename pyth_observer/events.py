@@ -506,7 +506,7 @@ class TWAPvsAggregate(PriceAccountValidationEvent):
 
 class PriceDeviationCoinGecko(PriceAccountValidationEvent):
     """
-    This alert is supposed to fire when a price feed deviates from CoinGecko price feed by a specified threshold.
+    This alert fires when a price feed deviates from CoinGecko price feed by a specified threshold.
     """
 
     error_code: str = "price-deviation-coingecko"
@@ -561,7 +561,7 @@ class PriceDeviationCoinGecko(PriceAccountValidationEvent):
 
 class PriceDeviationCrosschain(PriceAccountValidationEvent):
     """
-    This alert is supposed to fire when a cross-chain price feed deviates
+    This alert fires when a cross-chain price feed deviates
     from Solana price feed by a specified threshold.
     """
 
