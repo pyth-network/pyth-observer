@@ -1,6 +1,3 @@
-import pytest
-
-from pyth_observer.coingecko import get_coingecko_prices
 from pyth_observer.events import PriceDeviationCoinGecko
 from pythclient.pythaccounts import PythPriceInfo, PythPriceStatus
 
@@ -78,9 +75,3 @@ def test_price_deviation_coingecko():
     check_price_deviation_coingecko(
         100, 110, product_attrs, "ZZZT is more than 5% off from CoinGecko"
     )
-
-
-@pytest.mark.asyncio
-async def test_get_coingecko_prices():
-    coingecko_prices = await get_coingecko_prices(['BTC'])
-    assert coingecko_prices is not None

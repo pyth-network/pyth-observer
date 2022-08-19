@@ -1,8 +1,7 @@
-import pytest
+import time
 
 from pyth_observer.events import PriceDeviationCrosschain
 from pythclient.pythaccounts import PythPriceInfo, PythPriceStatus
-from pyth_observer.crosschain import get_crosschain_prices
 
 
 class MockPythProductAccount:
@@ -35,7 +34,6 @@ def check_price_deviation_crosschain(
     crosschain_price,
     crosschain_conf,
     crosschain_publish_time,
-    crosschain_prev_publish_time,
     product_attrs,
     expected_str,
 ):
@@ -55,7 +53,6 @@ def check_price_deviation_crosschain(
             "price": crosschain_price,
             "conf": crosschain_conf,
             "publish_time": crosschain_publish_time,
-            "prev_publish_time": crosschain_prev_publish_time,
         },
     )
     # Set the firing threshold to 5% for testing
@@ -83,24 +80,14 @@ def test_price_deviation_crosschain():
         "base": "BCH",
     }
 
-    check_price_deviation_crosschain(100, 100, 1, 1, 0, product_attrs, None)
-
-    # stale publish time
-    check_price_deviation_crosschain(100, 100, 1, 1, 1, product_attrs, None)
+    check_price_deviation_crosschain(100, 100, 1, int(time.time()), product_attrs, None)
 
     # > 5%
     check_price_deviation_crosschain(
         10,
         100,
         1,
-        1,
-        0,
+        int(time.time()),
         product_attrs,
-        "Cross-chain ZZZT is more than 5 confidence intervals away from Solana ZZZT",
+        "Cross-chain ZZZT is more than 5% off from Solana ZZZT",
     )
-
-
-@pytest.mark.asyncio
-async def test_get_crosschain_prices():
-    crosschain_prices = await get_crosschain_prices()
-    assert crosschain_prices is not None

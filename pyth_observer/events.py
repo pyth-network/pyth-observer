@@ -606,7 +606,7 @@ class PriceDeviationCrosschain(PriceAccountValidationEvent):
     """
 
     error_code: str = "price-deviation-cross-chain"
-    threshold = 20
+    threshold = int(os.environ.get("PYTH_OBSERVER_PRICE_DEVIATION_CROSSCHAIN", 5))
 
     def is_valid(self) -> bool:
         # check if cross-chain price exists
@@ -622,8 +622,9 @@ class PriceDeviationCrosschain(PriceAccountValidationEvent):
         if not trading or pyth_price == 0:
             return True
 
-        delta = abs(pyth_price - self.crosschain_price["price"])
-        self.crosschain_deviation = delta / self.crosschain_price["conf"]
+        self.crosschain_deviation = (
+            abs(self.crosschain_price["price"] - pyth_price) / pyth_price
+        ) * 100.0
 
         # check for stale prices
         if int(time.time()) - self.crosschain_price["publish_time"]:
@@ -635,13 +636,13 @@ class PriceDeviationCrosschain(PriceAccountValidationEvent):
 
     def get_event_details(self) -> Tuple[str, List[str]]:
         title = (
-            f"Cross-chain {self.symbol} is more than {self.threshold}"
-            + f" confidence intervals away from Solana {self.symbol}"
+            f"Cross-chain {self.symbol} is more than {self.threshold}%"
+            + f" off from Solana {self.symbol}"
         )
         details = [
             f"Cross-chain price: {self.crosschain_price['price']:.4f}, conf: {self.crosschain_price['conf']:.4f}",
             f"Solana price: {self.price_account.aggregate_price_info.price:.4f},"
             + f" conf: {self.price_account.aggregate_price_info.confidence_interval:.4f}",
-            f"Deviation: {self.crosschain_deviation:.4f} conf intervals away",
+            f"Deviation: {self.crosschain_deviation}% off",
         ]
         return title, details
