@@ -211,13 +211,15 @@ async def main(args):
             )
 
     async def run_crosschain_get_price():
-        # sleep for 2 seconds to allow pyth-observer to load products for the first time
-        await asyncio.sleep(2)
-        nonlocal crosschain_prices
-        while True:
-            crosschain_prices = await get_crosschain_prices()
-            # for product in products:
-            #     price_account_key = base58.b58decode(product.first_price_account_key.key).hex()
+        # TODO: add support for other networks when live
+        if args.network == "devnet":
+            # sleep for 2 seconds to allow pyth-observer to load products for the first time
+            await asyncio.sleep(2)
+            nonlocal crosschain_prices
+            while True:
+                crosschain_prices = await get_crosschain_prices(args.network)
+                # for product in products:
+                #     price_account_key = base58.b58decode(product.first_price_account_key.key).hex()
 
     await asyncio.gather(
         run_alerts(), run_coingecko_get_price(), run_crosschain_get_price()

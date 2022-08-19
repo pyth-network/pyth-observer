@@ -23,10 +23,10 @@ symbol_to_pubkey_mapping = get_crosschain_symbol_to_pubkey_mapping()
 # Currently it sends prices to wormhole every one minute, due to costs.
 # We can increase the frequency of the attester once we're live on pythnet.
 @throttle(rate_limit=1, period=60)
-async def get_crosschain_prices():
+async def get_crosschain_prices(cluster):
     query_params = "ids[]=" + "&ids[]=".join(symbol_to_pubkey_mapping.values())
     x = requests.get(
-        f"https://prices.devnet.pyth.network/api/latest_price_feeds?{query_params}"
+        f"https://prices.{cluster}.pyth.network/api/latest_price_feeds?{query_params}"
     )
     # return a dictionary of id -> {price, conf, expo} for fast lookup
     return {

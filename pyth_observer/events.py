@@ -1,4 +1,5 @@
 import os
+import time
 import datetime
 import pytz
 from typing import Tuple, List, Optional
@@ -559,6 +560,45 @@ class PriceDeviationCoinGecko(PriceAccountValidationEvent):
         return title, details
 
 
+class PriceStoppedUpdatingCrosschain(PriceAccountValidationEvent):
+    """
+    This alert fires when a cross-chain price feed stopped updating
+    for the past 1 hour.
+    """
+
+    error_code: str = "price-stopped-updating-cross-chain"
+    threshold = 3600  # 3600 seconds = 1 hour
+
+    def is_valid(self) -> bool:
+        # check if cross-chain price exists
+        if not self.crosschain_price:
+            return True
+
+        last_updated_difference = (
+            int(time.time()) - self.crosschain_price["publish_time"]
+        )
+
+        if last_updated_difference > self.threshold:
+            return False
+        return True
+
+    def get_event_details(self) -> Tuple[str, List[str]]:
+        title = f"Cross-chain {self.symbol} stopped updating for more than an hour"
+        details = [
+            f"Cross-chain price: {self.crosschain_price['price']:.4f}, conf: {self.crosschain_price['conf']:.4f}",
+            f"Solana price: {self.price_account.aggregate_price_info.price:.4f},"
+            + f" conf: {self.price_account.aggregate_price_info.confidence_interval:.4f}",
+            f"Last updated: {self.crosschain_price['publish_time']:.4f}",
+        ]
+        return title, details
+
+    def is_noisy(self) -> bool:
+        """
+        This event can be very noisy due to low frequency price updates.
+        """
+        return True
+
+
 class PriceDeviationCrosschain(PriceAccountValidationEvent):
     """
     This alert fires when a cross-chain price feed deviates
@@ -586,10 +626,7 @@ class PriceDeviationCrosschain(PriceAccountValidationEvent):
         self.crosschain_deviation = delta / self.crosschain_price["conf"]
 
         # check for stale prices
-        if (
-            self.crosschain_price["publish_time"]
-            == self.crosschain_price["prev_publish_time"]
-        ):
+        if int(time.time()) - self.crosschain_price["publish_time"]:
             return True
 
         if self.crosschain_deviation > self.threshold:
