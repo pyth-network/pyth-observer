@@ -218,8 +218,6 @@ async def main(args):
             nonlocal crosschain_prices
             while True:
                 crosschain_prices = await get_crosschain_prices(args.network)
-                # for product in products:
-                #     price_account_key = base58.b58decode(product.first_price_account_key.key).hex()
 
     await asyncio.gather(
         run_alerts(), run_coingecko_get_price(), run_crosschain_get_price()

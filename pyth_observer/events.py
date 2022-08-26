@@ -607,6 +607,7 @@ class PriceDeviationCrosschain(PriceAccountValidationEvent):
 
     error_code: str = "price-deviation-cross-chain"
     threshold = int(os.environ.get("PYTH_OBSERVER_PRICE_DEVIATION_CROSSCHAIN", 5))
+    staleness_threshold = 3600  # 3600 seconds = 1 hour
 
     def is_valid(self) -> bool:
         # check if cross-chain price exists
@@ -626,8 +627,11 @@ class PriceDeviationCrosschain(PriceAccountValidationEvent):
             abs(self.crosschain_price["price"] - pyth_price) / pyth_price
         ) * 100.0
 
-        # check for stale prices
-        if int(time.time()) - self.crosschain_price["publish_time"]:
+        # if price is stale don't alert as PriceStoppedUpdatingCrosschain event will take care of it
+        last_updated_difference = (
+            int(time.time()) - self.crosschain_price["publish_time"]
+        )
+        if last_updated_difference > self.threshold:
             return True
 
         if self.crosschain_deviation > self.threshold:
