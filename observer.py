@@ -213,8 +213,6 @@ async def main(args):
     async def run_crosschain_get_price():
         # TODO: add support for other networks when live
         if args.network == "devnet":
-            # sleep for 2 seconds to allow pyth-observer to load products for the first time
-            await asyncio.sleep(2)
             nonlocal crosschain_prices
             while True:
                 crosschain_prices = await get_crosschain_prices(args.network)
