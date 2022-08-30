@@ -6,7 +6,6 @@ all:
 	echo No default target - try ve, test, lint, run
 	false
 
-# COVER_PERCENT:=60
 
 # FIXME:
 # - depends on python > 3.6 (bad news for RHEL7 /and/ RHEL8)
@@ -25,7 +24,6 @@ cover: ve
 	    --cov=pyth_observer \
 	    --cov-report=html \
 	    --cov-report=term
-# 	    --cov-fail-under=$(COVER_PERCENT)
 
 lint: lint.python
 #lint: lint.yaml - argh, RHEL is too old to do this by default
