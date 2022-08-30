@@ -1,46 +1,14 @@
-#!/usr/bin/env python3
-import datetime
+# Notify slack via a webhook url
+#
 
-import pytz
+from .notification import NotificationBase
+
 import aiohttp
 
 from loguru import logger
 
 
-class Notification:
-    def get_footer(self, error):
-        """
-        A footer for longer form messages
-        """
-        now = datetime.datetime.now(tz=pytz.UTC)
-        nowtime = now.isoformat(sep=" ", timespec="seconds")
-        return [
-            f"Network: {error.network}",
-            f"Last seen {nowtime}",
-        ]
-
-    async def notify(self, error) -> None:
-        raise NotImplementedError
-
-
-class LoggerNotification(Notification):
-    """
-    Do nothing notification, just log to stderr
-    """
-
-    async def notify(self, error):
-        title, details = error.get_event_details()
-
-        logger.error(
-            "{} on {}: {} - {}",
-            error.error_code,
-            error.network,
-            title,
-            ", ".join(details),
-        )
-
-
-class SlackNotification(Notification):
+class Notifier(NotificationBase):
     """
     Notify slack via a webhook url
     """

@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 import argparse
 import asyncio
+import importlib
 import json
 import os
 import re
 import sys
 
+import base58
 from aiohttp import ClientConnectorError
 from loguru import logger
 from prometheus_client import Gauge, start_http_server
@@ -15,6 +17,7 @@ from pythclient.ratelimit import RateLimit
 
 from pyth_observer import get_key, get_solana_urls
 from pyth_observer.coingecko import get_coingecko_prices, symbol_to_id_mapping
+from pyth_observer.crosschain import CrosschainPriceObserver
 from pyth_observer.prices import Price, PriceValidator
 
 logger.enable("pythclient")
@@ -32,6 +35,32 @@ def get_publishers(network):
         logger.error("problem loading publishers.json only keys will be printed")
         json_data = {}
     return json_data.get(network, {})
+
+
+def init_notifiers(names):
+    """
+    Given the array of --notifier= args, load the appropriate modules and
+    initialise an object with any args.
+    Return an array of initialised objects
+    """
+
+    notifiers = []
+    for i in names:
+        args = i.split(sep="=", maxsplit=1)
+        if len(args) == 0:
+            raise ValueError("Notifier name not provided")
+        if len(args) == 1:
+            # Ensure we always have a param container, even if it is a dummy
+            args.append(None)
+
+        try:
+            module = importlib.import_module(args[0])
+        except ModuleNotFoundError:
+            raise NameError(f'Notifier Module "{args[0]}" could not be found')
+        notifier = module.Notifier(args[1])
+        notifiers.append(notifier)
+
+    return notifiers
 
 
 def filter_errors(regexes, errors):
@@ -52,12 +81,18 @@ async def main(args):
     http_url, ws_url = get_solana_urls(network=args.network)
 
     publishers = get_publishers(args.network)
+    products = {}
     coingecko_prices = {}
+    coingecko_prices_last_updated_at = {}
+    crosschain_prices = {}
     gprice = Gauge(
         "crypto_price", "Price", labelnames=["symbol", "publisher", "status"]
     )
 
+    notifiers = init_notifiers(args.notifier)
+
     async def run_alerts():
+        nonlocal products, coingecko_prices_last_updated_at
         async with PythClient(
             solana_endpoint=http_url,
             solana_ws_endpoint=ws_url,
@@ -72,7 +107,9 @@ async def main(args):
                 try:
                     await c.refresh_all_prices()
                 except (ClientConnectorError, SolanaException) as exc:
-                    logger.error("{} refreshing prices: {}", exc.__class__.__name__, exc)
+                    logger.error(
+                        "{} refreshing prices: {}", exc.__class__.__name__, exc
+                    )
                     asyncio.sleep(0.4)
                     continue
 
@@ -80,15 +117,22 @@ async def main(args):
                 try:
                     products = await c.get_products()
                 except (ClientConnectorError, SolanaException) as exc:
-                    logger.error("{} refreshing prices: {}", exc.__class__.__name__, exc)
+                    logger.error(
+                        "{} refreshing prices: {}", exc.__class__.__name__, exc
+                    )
                     asyncio.sleep(0.4)
                     continue
 
                 for product in products:
                     errors = []
                     symbol = product.symbol
-                    coingecko_price = coingecko_prices.get(product.attrs['base'])
-
+                    coingecko_price = coingecko_prices.get(product.attrs["base"])
+                    coingecko_price_last_updated_at = (
+                        coingecko_prices_last_updated_at.get(product.attrs["base"])
+                    )
+                    crosschain_price = crosschain_prices.get(
+                        base58.b58decode(product.first_price_account_key.key).hex()
+                    )
                     # prevent adding duplicate symbols
                     if symbol not in validators:
                         # TODO: If publisher_key is not None, then only do validation for that publisher
@@ -96,7 +140,9 @@ async def main(args):
                             key=args.publisher_key,
                             network=args.network,
                             symbol=symbol,
-                            coingecko_price=coingecko_price
+                            coingecko_price=coingecko_price,
+                            coingecko_price_last_updated_at=coingecko_price_last_updated_at,
+                            crosschain_price=crosschain_price,
                         )
                     prices = await product.get_prices()
 
@@ -110,6 +156,8 @@ async def main(args):
                         price_account_errors = validators[symbol].verify_price_account(
                             price_account=price_account,
                             coingecko_price=coingecko_price,
+                            coingecko_price_last_updated_at=coingecko_price_last_updated_at,
+                            crosschain_price=crosschain_price,
                             include_noisy=args.include_noisy_alerts,
                         )
                         if price_account_errors:
@@ -139,22 +187,40 @@ async def main(args):
                         if price_errors:
                             errors.extend(price_errors)
 
-                    filtered_errors = filter_errors(args.ignore, errors) if args.ignore else errors
+                    filtered_errors = (
+                        filter_errors(args.ignore, errors) if args.ignore else errors
+                    )
                     # Send all notifications for a given symbol pair
                     await validators[symbol].notify(
                         filtered_errors,
-                        slack_webhook_url=args.slack_webhook_url,
+                        notifiers,
                         notification_mins=args.notification_snooze_mins,
                     )
+                    if product.attrs["asset_type"] == "Crypto":
+                        # check if coingecko price exists
+                        coingecko_prices_last_updated_at[product.attrs["base"]] = (
+                            coingecko_price and coingecko_price["last_updated_at"]
+                        )
                 await asyncio.sleep(0.4)
 
     async def run_coingecko_get_price():
         nonlocal coingecko_prices
         while True:
-            coingecko_prices = get_coingecko_prices([x for x in symbol_to_id_mapping])
-            await asyncio.sleep(2)
+            coingecko_prices = await get_coingecko_prices(
+                [x for x in symbol_to_id_mapping]
+            )
 
-    await asyncio.gather(run_alerts(), run_coingecko_get_price())
+    async def run_crosschain_get_price():
+        # TODO: add support for other networks when live
+        crosschain_price_observer = CrosschainPriceObserver(args.crosschain_api_url)
+        if crosschain_price_observer.valid:
+            nonlocal crosschain_prices
+            while True:
+                crosschain_prices = await crosschain_price_observer.get_crosschain_prices()
+
+    await asyncio.gather(
+        run_alerts(), run_coingecko_get_price(), run_crosschain_get_price()
+    )
 
 
 if __name__ == "__main__":
@@ -173,7 +239,7 @@ if __name__ == "__main__":
         "-n",
         "--network",
         action="store",
-        choices=["devnet", "mainnet", "testnet"],
+        choices=["devnet", "mainnet", "testnet", "pythtest", "pythnet"],
         default="devnet",
     )
     parser.add_argument(
@@ -192,6 +258,11 @@ if __name__ == "__main__":
         "--slack-webhook-url",
         default=os.environ.get("PYTH_OBSERVER_SLACK_WEBHOOK_URL"),
         help="Slack incoming webhook url for notifications. This is required to send alerts to slack",
+    )
+    parser.add_argument(
+        "--crosschain-api-url",
+        default=os.environ.get("PYTH_OBSERVER_CROSSCHAIN_API_URL"),
+        help="URL of the cross-chain API endpoint. This is required to send alerts regarding cross-chain prices",
     )
     parser.add_argument(
         "--notification-snooze-mins",
@@ -222,9 +293,27 @@ if __name__ == "__main__":
     parser.add_argument(
         "--ignore",
         nargs="+",
-        help="List of symbols and / or events to ignore. For e.g. 'Crypto.ORCA/USD' to ignore all ORCA alerts and 'FX.*/price-feed-offline' to ignore all price-feed-offline alerts for all FX pairs",
+        help="List of symbols and / or events to ignore. "
+        "For e.g. 'Crypto.ORCA/USD' to ignore all ORCA alerts and "
+        "'FX.*/price-feed-offline' to ignore all price-feed-offline "
+        "alerts for all FX pairs",
+    )
+    parser.add_argument(
+        "--notifier",
+        action="append",
+        help="Specify a notification system to be used.  Parameters can be "
+        "passed to the notifier by separating with an equals sign",
     )
     args = parser.parse_args()
+
+    # we might have an old slack config option
+    #
+    if not args.notifier:
+        if args.slack_webhook_url is not None:
+            slack = args.slack_webhook_url
+            args.notifier = [f"pyth_observer.notifiers.slack={slack}"]
+        else:
+            args.notifier = ["pyth_observer.notifiers.logger"]
 
     logger.remove()
     logger.add(sys.stderr, level=args.log_level)
