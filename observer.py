@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 import argparse
 import asyncio
+import importlib
 import json
 import os
 import re
 import sys
-import importlib
 
+import base58
 from aiohttp import ClientConnectorError
 from loguru import logger
 from prometheus_client import Gauge, start_http_server
@@ -16,6 +17,7 @@ from pythclient.ratelimit import RateLimit
 
 from pyth_observer import get_key, get_solana_urls
 from pyth_observer.coingecko import get_coingecko_prices, symbol_to_id_mapping
+from pyth_observer.crosschain import CrosschainPriceObserver
 from pyth_observer.prices import Price, PriceValidator
 
 logger.enable("pythclient")
@@ -79,8 +81,10 @@ async def main(args):
     http_url, ws_url = get_solana_urls(network=args.network)
 
     publishers = get_publishers(args.network)
+    products = {}
     coingecko_prices = {}
     coingecko_prices_last_updated_at = {}
+    crosschain_prices = {}
     gprice = Gauge(
         "crypto_price", "Price", labelnames=["symbol", "publisher", "status"]
     )
@@ -88,7 +92,7 @@ async def main(args):
     notifiers = init_notifiers(args.notifier)
 
     async def run_alerts():
-        nonlocal coingecko_prices_last_updated_at
+        nonlocal products, coingecko_prices_last_updated_at
         async with PythClient(
             solana_endpoint=http_url,
             solana_ws_endpoint=ws_url,
@@ -126,6 +130,9 @@ async def main(args):
                     coingecko_price_last_updated_at = (
                         coingecko_prices_last_updated_at.get(product.attrs["base"])
                     )
+                    crosschain_price = crosschain_prices.get(
+                        base58.b58decode(product.first_price_account_key.key).hex()
+                    )
                     # prevent adding duplicate symbols
                     if symbol not in validators:
                         # TODO: If publisher_key is not None, then only do validation for that publisher
@@ -135,6 +142,7 @@ async def main(args):
                             symbol=symbol,
                             coingecko_price=coingecko_price,
                             coingecko_price_last_updated_at=coingecko_price_last_updated_at,
+                            crosschain_price=crosschain_price,
                         )
                     prices = await product.get_prices()
 
@@ -149,6 +157,7 @@ async def main(args):
                             price_account=price_account,
                             coingecko_price=coingecko_price,
                             coingecko_price_last_updated_at=coingecko_price_last_updated_at,
+                            crosschain_price=crosschain_price,
                             include_noisy=args.include_noisy_alerts,
                         )
                         if price_account_errors:
@@ -201,7 +210,17 @@ async def main(args):
                 [x for x in symbol_to_id_mapping]
             )
 
-    await asyncio.gather(run_alerts(), run_coingecko_get_price())
+    async def run_crosschain_get_price():
+        # TODO: add support for other networks when live
+        crosschain_price_observer = CrosschainPriceObserver(args.crosschain_api_url)
+        if crosschain_price_observer.valid:
+            nonlocal crosschain_prices
+            while True:
+                crosschain_prices = await crosschain_price_observer.get_crosschain_prices()
+
+    await asyncio.gather(
+        run_alerts(), run_coingecko_get_price(), run_crosschain_get_price()
+    )
 
 
 if __name__ == "__main__":
@@ -239,6 +258,11 @@ if __name__ == "__main__":
         "--slack-webhook-url",
         default=os.environ.get("PYTH_OBSERVER_SLACK_WEBHOOK_URL"),
         help="Slack incoming webhook url for notifications. This is required to send alerts to slack",
+    )
+    parser.add_argument(
+        "--crosschain-api-url",
+        default=os.environ.get("PYTH_OBSERVER_CROSSCHAIN_API_URL"),
+        help="URL of the cross-chain API endpoint. This is required to send alerts regarding cross-chain prices",
     )
     parser.add_argument(
         "--notification-snooze-mins",

@@ -1,4 +1,5 @@
 import os
+import time
 import datetime
 import pytz
 from typing import Tuple, List, Optional
@@ -55,6 +56,7 @@ class ValidationEvent:
         symbol=None,
         coingecko_price=None,
         coingecko_price_last_updated_at=None,
+        crosschain_price=None,
     ) -> None:
         self.price = price
         self.symbol = symbol
@@ -63,6 +65,7 @@ class ValidationEvent:
         self.publisher_key = publisher_key
         self.coingecko_price = coingecko_price
         self.coingecko_price_last_updated_at = coingecko_price_last_updated_at
+        self.crosschain_price = crosschain_price
         self.creation_time = datetime.datetime.now()
 
         if publisher_key:
@@ -244,7 +247,7 @@ class StoppedPublishing(PriceValidationEvent):
     less than 1000 slots.
     """
 
-    error_code: str = "stop-publishing-about-5-mins"
+    error_code: str = "stopped-publishing-about-5-mins"
     threshold_min = int(os.environ.get("PYTH_OBSERVER_STOP_PUBLISHING_MIN_SLOTS", 600))
     threshold_max = int(os.environ.get("PYTH_OBSERVER_STOP_PUBLISHING_MAX_SLOTS", 1000))
 
@@ -265,8 +268,8 @@ class StoppedPublishing(PriceValidationEvent):
     def get_event_details(self) -> Tuple[str, List[str]]:
         title = f"{self.publisher_name.upper()} stopped publishing {self.symbol} for {self.stopped_slots} slots"
         details = [
-            f"Aggregate last slot: {self.price.aggregate.pub_slot}"
-            f"Published last slot: {self.publisher_latest.pub_slot}"
+            f"Aggregate last slot: {self.price.aggregate.pub_slot}",
+            f"Published last slot: {self.publisher_latest.pub_slot}",
         ]
         return title, details
 
@@ -504,7 +507,7 @@ class TWAPvsAggregate(PriceAccountValidationEvent):
 
 class PriceDeviationCoinGecko(PriceAccountValidationEvent):
     """
-    This alert is supposed to fire when a price feed deviates from CoinGecko price feed by a specified threshold.
+    This alert fires when a price feed deviates from CoinGecko price feed by a specified threshold.
     """
 
     error_code: str = "price-deviation-coingecko"
@@ -553,5 +556,97 @@ class PriceDeviationCoinGecko(PriceAccountValidationEvent):
             f"CoinGecko Price Last Updated At: {last_updated_at}",
             f"Deviation: {self.coingecko_deviation}% off",
             f"CoinGecko Price Chart: {url}",
+        ]
+        return title, details
+
+
+class PriceStoppedUpdatingCrosschain(PriceAccountValidationEvent):
+    """
+    This alert fires when a cross-chain price feed stopped updating
+    for the past 1 hour.
+    """
+
+    error_code: str = "price-stopped-updating-cross-chain"
+    threshold = 3600  # 3600 seconds = 1 hour
+
+    def is_valid(self) -> bool:
+        # check if cross-chain price exists
+        if not self.crosschain_price:
+            return True
+
+        last_updated_difference = (
+            int(time.time()) - self.crosschain_price["publish_time"]
+        )
+
+        if last_updated_difference > self.threshold:
+            return False
+        return True
+
+    def get_event_details(self) -> Tuple[str, List[str]]:
+        title = f"Cross-chain {self.symbol} stopped updating for more than an hour"
+        details = [
+            f"Cross-chain price: {self.crosschain_price['price']:.4f}, conf: {self.crosschain_price['conf']:.4f}",
+            f"Solana price: {self.price_account.aggregate_price_info.price:.4f},"
+            + f" conf: {self.price_account.aggregate_price_info.confidence_interval:.4f}",
+            f"Last updated: {self.crosschain_price['publish_time']:.4f}",
+        ]
+        return title, details
+
+    def is_noisy(self) -> bool:
+        """
+        This event can be very noisy due to low frequency price updates.
+        """
+        return True
+
+
+class PriceDeviationCrosschain(PriceAccountValidationEvent):
+    """
+    This alert fires when a cross-chain price feed deviates
+    from Solana price feed by a specified threshold.
+    """
+
+    error_code: str = "price-deviation-cross-chain"
+    threshold = int(os.environ.get("PYTH_OBSERVER_PRICE_DEVIATION_CROSSCHAIN", 5))
+    staleness_threshold = 3600  # 3600 seconds = 1 hour
+
+    def is_valid(self) -> bool:
+        # check if cross-chain price exists
+        if not self.crosschain_price:
+            return True
+
+        trading = (
+            self.price_account.aggregate_price_info.price_status
+            == PythPriceStatus.TRADING
+        )
+        pyth_price = self.price_account.aggregate_price_info.price
+
+        if not trading or pyth_price == 0:
+            return True
+
+        self.crosschain_deviation = (
+            abs(self.crosschain_price["price"] - pyth_price) / pyth_price
+        ) * 100.0
+
+        # if price is stale don't alert as PriceStoppedUpdatingCrosschain event will take care of it
+        last_updated_difference = (
+            int(time.time()) - self.crosschain_price["publish_time"]
+        )
+        if last_updated_difference > self.threshold:
+            return True
+
+        if self.crosschain_deviation > self.threshold:
+            return False
+        return True
+
+    def get_event_details(self) -> Tuple[str, List[str]]:
+        title = (
+            f"Cross-chain {self.symbol} is more than {self.threshold}%"
+            + f" off from Solana {self.symbol}"
+        )
+        details = [
+            f"Cross-chain price: {self.crosschain_price['price']:.4f}, conf: {self.crosschain_price['conf']:.4f}",
+            f"Solana price: {self.price_account.aggregate_price_info.price:.4f},"
+            + f" conf: {self.price_account.aggregate_price_info.confidence_interval:.4f}",
+            f"Deviation: {self.crosschain_deviation}% off",
         ]
         return title, details
