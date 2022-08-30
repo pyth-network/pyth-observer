@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 import argparse
 import asyncio
+import importlib
 import json
 import os
 import re
 import sys
-import importlib
-import base58
 
+import base58
 from aiohttp import ClientConnectorError
 from loguru import logger
 from prometheus_client import Gauge, start_http_server
@@ -17,7 +17,7 @@ from pythclient.ratelimit import RateLimit
 
 from pyth_observer import get_key, get_solana_urls
 from pyth_observer.coingecko import get_coingecko_prices, symbol_to_id_mapping
-from pyth_observer.crosschain import get_crosschain_prices
+from pyth_observer.crosschain import CrosschainPriceObserver
 from pyth_observer.prices import Price, PriceValidator
 
 logger.enable("pythclient")
@@ -212,10 +212,11 @@ async def main(args):
 
     async def run_crosschain_get_price():
         # TODO: add support for other networks when live
-        if args.network == "devnet":
+        crosschain_price_observer = CrosschainPriceObserver(args.crosschain_api_url)
+        if crosschain_price_observer.valid:
             nonlocal crosschain_prices
             while True:
-                crosschain_prices = await get_crosschain_prices(args.network)
+                crosschain_prices = await crosschain_price_observer.get_crosschain_prices()
 
     await asyncio.gather(
         run_alerts(), run_coingecko_get_price(), run_crosschain_get_price()
@@ -257,6 +258,11 @@ if __name__ == "__main__":
         "--slack-webhook-url",
         default=os.environ.get("PYTH_OBSERVER_SLACK_WEBHOOK_URL"),
         help="Slack incoming webhook url for notifications. This is required to send alerts to slack",
+    )
+    parser.add_argument(
+        "--crosschain-api-url",
+        default=os.environ.get("PYTH_OBSERVER_CROSSCHAIN_API_URL"),
+        help="URL of the cross-chain API endpoint. This is required to send alerts regarding cross-chain prices",
     )
     parser.add_argument(
         "--notification-snooze-mins",

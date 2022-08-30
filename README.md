@@ -36,6 +36,7 @@ Run the unit tests by running `pytest` from the repository root.
 | `PYTH_OBSERVER_STOP_PUBLISHING_MAX_SLOTS`   | 1000        | Max slots behind a stop-publishing alert fires on        |
 | `PYTH_OBSERVER_PRICE_DEVIATION_COINGECKO`   | 5           | Percentage between aggregate price and CoinGecko price   |
 | `PYTH_OBSERVER_PRICE_DEVIATION_CROSSCHAIN`  | 5           | Percentage between aggregate price and cross-chain price |
+| `PYTH_OBSERVER_CROSSCHAIN_API_URL`          | None        | URL of the cross-chain API endpoint                      |
 
 ## Running
 
