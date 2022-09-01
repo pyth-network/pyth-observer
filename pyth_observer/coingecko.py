@@ -1,7 +1,9 @@
 import json
 import os
 
+from loguru import logger
 from pycoingecko import CoinGeckoAPI
+from requests.exceptions import HTTPError
 
 from throttler import throttle
 
@@ -30,7 +32,13 @@ api_to_symbol_mapping = {
 @throttle(rate_limit=1, period=60)
 async def get_coingecko_prices(symbols):
     ids = [symbol_to_id_mapping[x]["api"] for x in symbol_to_id_mapping if x in symbols]
-    prices = cg.get_price(ids=ids, vs_currencies="usd", include_last_updated_at=True)
+    try:
+        prices = cg.get_price(ids=ids, vs_currencies="usd", include_last_updated_at=True)
+    except HTTPError as exc:
+        logger.exception(exc)
+        logger.error("CoinGecko API call failed - CoinGecko price comparisons not available.")
+        prices = {}
+
     # remap to symbol -> prices
     prices_mapping = {api_to_symbol_mapping[x]: prices[x] for x in prices}
     return prices_mapping
