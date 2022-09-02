@@ -34,7 +34,7 @@ async def get_coingecko_prices(symbols):
     ids = [symbol_to_id_mapping[x]["api"] for x in symbol_to_id_mapping if x in symbols]
     try:
         prices = cg.get_price(ids=ids, vs_currencies="usd", include_last_updated_at=True)
-    except HTTPError as exc:
+    except (ValueError, HTTPError) as exc:
         logger.exception(exc)
         logger.error("CoinGecko API call failed - CoinGecko price comparisons not available.")
         prices = {}

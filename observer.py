@@ -211,6 +211,10 @@ async def main(args):
             )
 
     async def run_crosschain_get_price():
+        if args.crosschain_api_url is None:
+            logger.error("Warning: no crosschain API url provided. crosschain alerts are disabled.")
+            return
+
         # TODO: add support for other networks when live
         crosschain_price_observer = CrosschainPriceObserver(args.crosschain_api_url)
         if crosschain_price_observer.valid:
