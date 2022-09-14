@@ -9,6 +9,7 @@ import sys
 
 import base58
 from aiohttp import ClientConnectorError
+from collections import defaultdict
 from loguru import logger
 from prometheus_client import Gauge, start_http_server
 from pythclient.exceptions import SolanaException
@@ -89,7 +90,7 @@ async def main(args):
         "crypto_price", "Price", labelnames=["symbol", "publisher", "status"]
     )
     num_alerts_gauge = Gauge(
-        "num_alerts", "Number of alerts fired", labelnames=[]
+        "num_alerts", "Number of alerts fired", labelnames=["symbol"]
     )
 
     notifiers = init_notifiers(args.notifier)
@@ -200,7 +201,9 @@ async def main(args):
                         notification_mins=args.notification_snooze_mins,
                     )
 
-                    num_alerts_gauge.set(filtered_errors.size())
+                    if args.enable_prometheus:
+                        exemplar = dict([(e.error_code, "true") for e in filtered_errors])
+                        num_alerts_gauge.labels(symbol=symbol).set(len(filtered_errors), exemplar=exemplar)
 
                     if product.attrs["asset_type"] == "Crypto":
                         # check if coingecko price exists
