@@ -85,8 +85,11 @@ async def main(args):
     coingecko_prices = {}
     coingecko_prices_last_updated_at = {}
     crosschain_prices = {}
-    gprice = Gauge(
+    price_gauge = Gauge(
         "crypto_price", "Price", labelnames=["symbol", "publisher", "status"]
+    )
+    num_alerts_gauge = Gauge(
+        "num_alerts", "Number of alerts fired", labelnames=[]
     )
 
     notifiers = init_notifiers(args.notifier)
@@ -173,7 +176,7 @@ async def main(args):
                             ] = price_comp.last_aggregate_price_info
 
                             if args.enable_prometheus:
-                                gprice.labels(
+                                price_gauge.labels(
                                     symbol=symbol,
                                     publisher=publisher,
                                     status=price.quoters[publisher].price_status.name,
@@ -196,6 +199,9 @@ async def main(args):
                         notifiers,
                         notification_mins=args.notification_snooze_mins,
                     )
+
+                    num_alerts_gauge.set(filtered_errors.size())
+
                     if product.attrs["asset_type"] == "Crypto":
                         # check if coingecko price exists
                         coingecko_prices_last_updated_at[product.attrs["base"]] = (
