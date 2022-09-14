@@ -203,7 +203,7 @@ async def main(args):
 
                     if args.enable_prometheus:
                         exemplar = dict([(e.error_code, "true") for e in filtered_errors])
-                        num_alerts_gauge.labels(symbol=symbol).set(len(filtered_errors), exemplar=exemplar)
+                        num_alerts_gauge.labels(symbol=symbol).set(len(filtered_errors), exemplar)
 
                     if product.attrs["asset_type"] == "Crypto":
                         # check if coingecko price exists
