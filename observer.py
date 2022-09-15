@@ -86,9 +86,6 @@ async def main(args):
     coingecko_prices = {}
     coingecko_prices_last_updated_at = {}
     crosschain_prices = {}
-    price_gauge = Gauge(
-        "crypto_price", "Price", labelnames=["symbol", "publisher", "status"]
-    )
     num_alerts_counter = Counter(
         "num_alerts", "Number of alerts fired", labelnames=["symbol"]
     )
@@ -176,13 +173,6 @@ async def main(args):
                                 publisher
                             ] = price_comp.last_aggregate_price_info
 
-                            if args.enable_prometheus:
-                                price_gauge.labels(
-                                    symbol=symbol,
-                                    publisher=publisher,
-                                    status=price.quoters[publisher].price_status.name,
-                                ).set(price.quoters[publisher].price)
-
                         # Where the magic happens!
                         price_errors = validators[symbol].verify_price(
                             price=price,
@@ -204,6 +194,8 @@ async def main(args):
                     if args.enable_prometheus:
                         for e in filtered_errors:
                             num_alerts_counter.labels(symbol=symbol).inc(exemplar={"error_code": e.error_code})
+                        if len(filtered_errors) == 0:
+                            num_alerts_counter.labels(symbol=symbol).inc(0)
 
                     if product.attrs["asset_type"] == "Crypto":
                         # check if coingecko price exists
