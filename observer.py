@@ -9,9 +9,8 @@ import sys
 
 import base58
 from aiohttp import ClientConnectorError
-from collections import defaultdict
 from loguru import logger
-from prometheus_client import Counter, Gauge, start_http_server
+from prometheus_client import Counter, start_http_server
 from pythclient.exceptions import SolanaException
 from pythclient.pythclient import PythClient
 from pythclient.ratelimit import RateLimit
@@ -202,7 +201,7 @@ async def main(args):
                             formatted = f"{title}\n{details_joined}"
                             code_to_errors[e] = [formatted]
 
-                        exemplar = dict([(k, "---\n".join(v)) for k,v in code_to_errors.items()])
+                        exemplar = dict([(k, "---\n".join(v)) for k, v in code_to_errors.items()])
                         num_alerts_counter.labels(symbol=symbol).inc(len(filtered_errors), exemplar=exemplar)
                         if len(filtered_errors) == 0:
                             num_alerts_counter.labels(symbol=symbol).inc(0)
