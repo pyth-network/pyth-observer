@@ -194,14 +194,16 @@ async def main(args):
                         code_to_errors = {}
                         for e in filtered_errors:
                             if e.error_code not in code_to_errors:
-                                code_to_errors[e] = []
+                                code_to_errors[e.error_code] = []
 
                             title, details = e.get_event_details()
                             details_joined = '\n'.join(details)
                             formatted = f"{title}\n{details_joined}"
-                            code_to_errors[e] = [formatted]
+                            code_to_errors[e.error_code].append(formatted)
 
-                        exemplar = dict([(k, "---\n".join(v)) for k, v in code_to_errors.items()])
+                        exemplar = dict([(k.replace("-", "_"), "---\n".join(v)) for k, v in code_to_errors.items()])
+                        if len(exemplar) > 0:
+                            print(exemplar)
                         num_alerts_counter.labels(symbol=symbol).inc(len(filtered_errors), exemplar=exemplar)
                         if len(filtered_errors) == 0:
                             num_alerts_counter.labels(symbol=symbol).inc(0)
