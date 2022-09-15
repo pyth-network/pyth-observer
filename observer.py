@@ -197,7 +197,7 @@ async def main(args):
                             if e.error_code not in code_to_errors:
                                 code_to_errors[e] = []
 
-                            title, details = e.get_event_details()[0]
+                            title, details = e.get_event_details()
                             details_joined = '\n'.join(details)
                             formatted = f"{title}\n{details_joined}"
                             code_to_errors[e] = [formatted]
