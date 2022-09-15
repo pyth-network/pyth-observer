@@ -10,7 +10,7 @@ import sys
 import base58
 from aiohttp import ClientConnectorError
 from loguru import logger
-from prometheus_client import Gauge, start_http_server
+from prometheus_client import Counter, start_http_server
 from pythclient.exceptions import SolanaException
 from pythclient.pythclient import PythClient
 from pythclient.ratelimit import RateLimit
@@ -85,8 +85,8 @@ async def main(args):
     coingecko_prices = {}
     coingecko_prices_last_updated_at = {}
     crosschain_prices = {}
-    gprice = Gauge(
-        "crypto_price", "Price", labelnames=["symbol", "publisher", "status"]
+    num_alerts_counter = Counter(
+        "num_alerts", "Number of alerts fired", labelnames=["symbol"]
     )
 
     notifiers = init_notifiers(args.notifier)
@@ -172,13 +172,6 @@ async def main(args):
                                 publisher
                             ] = price_comp.last_aggregate_price_info
 
-                            if args.enable_prometheus:
-                                gprice.labels(
-                                    symbol=symbol,
-                                    publisher=publisher,
-                                    status=price.quoters[publisher].price_status.name,
-                                ).set(price.quoters[publisher].price)
-
                         # Where the magic happens!
                         price_errors = validators[symbol].verify_price(
                             price=price,
@@ -196,6 +189,15 @@ async def main(args):
                         notifiers,
                         notification_mins=args.notification_snooze_mins,
                     )
+
+                    if args.enable_prometheus:
+                        for e in filtered_errors:
+                            num_alerts_counter.labels(symbol=symbol).inc(exemplar={"error_code": e.unique_id})
+
+                        # This makes per-symbol counters show up with a 0 value on initialization.
+                        if len(filtered_errors) == 0:
+                            num_alerts_counter.labels(symbol=symbol).inc(0)
+
                     if product.attrs["asset_type"] == "Crypto":
                         # check if coingecko price exists
                         coingecko_prices_last_updated_at[product.attrs["base"]] = (
