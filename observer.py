@@ -198,7 +198,7 @@ async def main(args):
                                 code_to_errors[e] = []
 
                             title, details = e.get_event_details()[0]
-                            details_joined = '\n''.join(details)
+                            details_joined = '\n'.join(details)
                             formatted = f"{title}\n{details_joined}"
                             code_to_errors[e] = [formatted]
 
