@@ -192,8 +192,17 @@ async def main(args):
                     )
 
                     if args.enable_prometheus:
+                        code_to_errors = {}
                         for e in filtered_errors:
-                            num_alerts_counter.labels(symbol=symbol).inc(exemplar={"error_code": e.error_code})
+                            if e.error_code not in code_to_errors:
+                                code_to_errors[e] = []
+
+                            title, details = e.get_event_details()[0]
+                            formatted = f"{title}\n{'\n''.join(details)}"
+                            code_to_errors[e] = [formatted]
+
+                        exemplar = dict([(k, "---\n".join(v)) for k,v in code_to_errors.items()])
+                        num_alerts_counter.labels(symbol=symbol).inc(len(filtered_errors), exemplar=exemplar)
                         if len(filtered_errors) == 0:
                             num_alerts_counter.labels(symbol=symbol).inc(0)
 
