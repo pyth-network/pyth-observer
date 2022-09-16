@@ -124,6 +124,11 @@ async def main(args):
                     continue
 
                 for product in products:
+                    # Hack: pythnet has some tombstone accounts without metadata.
+                    # These accounts crash pyth-observer.
+                    if "base" not in product.attrs:
+                        continue
+
                     errors = []
                     symbol = product.symbol
                     coingecko_price = coingecko_prices.get(product.attrs["base"])
