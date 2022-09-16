@@ -126,7 +126,7 @@ async def main(args):
                 for product in products:
                     # Hack: pythnet has some tombstone accounts without metadata.
                     # These accounts crash pyth-observer.
-                    if not "base" in product.attrs:
+                    if "base" not in product.attrs:
                         continue
 
                     errors = []
