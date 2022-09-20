@@ -197,7 +197,8 @@ async def main(args):
 
                     if args.enable_prometheus:
                         for e in filtered_errors:
-                            num_alerts_counter.labels(symbol=symbol).inc(exemplar={"error_code": e.unique_id})
+                            # TODO: pass exemplar exemplar={"error_code": e.unique_id}
+                            num_alerts_counter.labels(symbol=symbol).inc(1)
 
                         # This makes per-symbol counters show up with a 0 value on initialization.
                         if len(filtered_errors) == 0:
