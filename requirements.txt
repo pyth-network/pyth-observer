@@ -4,6 +4,7 @@ loguru
 pytz
 pycoingecko==2.2.0
 throttler==1.2.1
+datadog-api-client==2.3.0
 
 # Testing
 pytest

@@ -272,6 +272,11 @@ if __name__ == "__main__":
         help="Slack incoming webhook url for notifications. This is required to send alerts to slack",
     )
     parser.add_argument(
+        "--datadog-api-key",
+        default=os.environ.get("DATADOG_API_KEY"),
+        help="API key for datadog. If provided, all alerts will be sent as events to Datadog.",
+    )
+    parser.add_argument(
         "--crosschain-api-url",
         default=os.environ.get("PYTH_OBSERVER_CROSSCHAIN_API_URL"),
         help="URL of the cross-chain API endpoint. This is required to send alerts regarding cross-chain prices",
