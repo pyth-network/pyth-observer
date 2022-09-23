@@ -28,9 +28,7 @@ class Notifier(NotificationBase):
         body = EventCreateRequest(
             title=title,
             text="\n".join(details),
-            tags=[
-                "test:jayant",
-            ],
+            tags=tags,
         )
 
         with ApiClient(self.configuration) as api_client:
