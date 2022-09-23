@@ -91,10 +91,6 @@ async def main(args):
 
     notifiers = init_notifiers(args.notifier)
 
-    module = importlib.import_module("pyth_observer.notifiers.datadog")
-    n = module.Notifier(None)
-    await n.test_notify()
-
     async def run_alerts():
         nonlocal products, coingecko_prices_last_updated_at
         async with PythClient(

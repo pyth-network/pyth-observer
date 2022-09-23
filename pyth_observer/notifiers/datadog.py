@@ -21,8 +21,10 @@ class Notifier(NotificationBase):
     async def notify(self, error):
         title, details = error.get_event_details()
 
+        tags = [f"symbol:{error.symbol}", f"error_code:{error.error_code}", f"network:{error.network}"]
+        if error.publisher_key is not None:
+            tags.append(f"publisher:{error.publisher_name}")
 
-        
         body = EventCreateRequest(
             title=title,
             text="\n".join(details),
@@ -33,21 +35,4 @@ class Notifier(NotificationBase):
 
         with ApiClient(self.configuration) as api_client:
             api_instance = EventsApi(api_client)
-            response = api_instance.create_event(body=body)
-
-
-    async def test_notify(self):
-        print("HERE")
-        body = EventCreateRequest(
-            title="test event",
-            text="\n".join(["a", "b"]),
-            tags=[
-                "test:jayant",
-            ],
-        )
-
-        with ApiClient(self.configuration) as api_client:
-            api_instance = EventsApi(api_client)
-            response = api_instance.create_event(body=body)
-
-            print(response)
+            api_instance.create_event(body=body)
