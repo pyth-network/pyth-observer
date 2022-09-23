@@ -37,7 +37,7 @@ Run the unit tests by running `pytest` from the repository root.
 | `PYTH_OBSERVER_PRICE_DEVIATION_COINGECKO`   | 5           | Percentage between aggregate price and CoinGecko price          |
 | `PYTH_OBSERVER_PRICE_DEVIATION_CROSSCHAIN`  | 5           | Percentage between aggregate price and cross-chain price        |
 | `PYTH_OBSERVER_CROSSCHAIN_API_URL`          | None        | URL of the cross-chain API endpoint                             |
-| `DD_SITE`                                   | None        | Datadog URL, e.g., `datadog.eu` (required for Datadog notifier) 
+| `DD_SITE`                                   | None        | Datadog URL, e.g., `datadog.eu` (required for Datadog notifier) |
 | `DD_API_KEY`                                | None        | Datadog API Key (required for Datadog notifier)                 |
 
 
