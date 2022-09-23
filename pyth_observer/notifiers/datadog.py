@@ -1,11 +1,6 @@
 from .notification import NotificationBase
 
-import aiohttp
-
-from loguru import logger
-
 from datadog_api_client import ApiClient, Configuration
-from datadog_api_client.v1.api.authentication_api import AuthenticationApi
 from datadog_api_client.v1.api.events_api import EventsApi
 from datadog_api_client.v1.model.event_create_request import EventCreateRequest
 
