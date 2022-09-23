@@ -21,6 +21,8 @@ class Notifier(NotificationBase):
     async def notify(self, error):
         title, details = error.get_event_details()
 
+        error_id = error.unique_id
+
         tags = [f"symbol:{error.symbol}", f"error_code:{error.error_code}", f"network:{error.network}"]
         if error.publisher_key is not None:
             tags.append(f"publisher:{error.publisher_name}")
@@ -29,6 +31,7 @@ class Notifier(NotificationBase):
             title=title,
             text="\n".join(details),
             tags=tags,
+            aggregation_key=error_id,
         )
 
         with ApiClient(self.configuration) as api_client:
