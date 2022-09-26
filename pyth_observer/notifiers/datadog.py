@@ -27,7 +27,6 @@ class Notifier(NotificationBase):
             text="\n".join(details),
             tags=tags,
             aggregation_key=error_id,
-            source_type_name="pyth-observer"
         )
 
         with ApiClient(self.configuration) as api_client:
