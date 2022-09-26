@@ -18,7 +18,7 @@ class Notifier(NotificationBase):
 
         error_id = error.unique_id
 
-        tags = [f"symbol:{error.symbol}", f"error_code:{error.error_code}", f"network:{error.network}"]
+        tags = [f"symbol:{error.symbol}", f"error_code:{error.error_code}", f"network:{error.network}", f"service:pyth-observer-{error.network}"]
         if error.publisher_key is not None:
             tags.append(f"publisher:{error.publisher_name}")
 
@@ -27,6 +27,7 @@ class Notifier(NotificationBase):
             text="\n".join(details),
             tags=tags,
             aggregation_key=error_id,
+            source_type_name="pyth-observer"
         )
 
         with ApiClient(self.configuration) as api_client:
