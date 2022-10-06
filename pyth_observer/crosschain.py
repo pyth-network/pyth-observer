@@ -32,10 +32,9 @@ class CrosschainPriceObserver:
         # return a dictionary of id -> {price, conf, expo} for fast lookup
         return {
             data["id"]: {
-                "price": int(data["price"]) * 10 ** data["expo"],
-                "conf": int(data["conf"]) * 10 ** data["expo"],
-                "publish_time": data["publish_time"],
-                "prev_publish_time": data["prev_publish_time"],
+                "price": int(data["price"]["price"]) * 10 ** data["price"]["expo"],
+                "conf": int(data["price"]["conf"]) * 10 ** data["price"]["expo"],
+                "publish_time": data["price"]["publish_time"],
             }
             for data in latest_price_feeds
         }
