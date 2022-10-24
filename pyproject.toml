@@ -42,6 +42,9 @@ isort = "^5.10.1"
 black = "^22.10.0"
 mypy = "^0.982"
 
+[tool.poetry.scripts]
+pyth-observer = "pyth_observer.cli:run"
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
