@@ -1,5 +1,7 @@
 import asyncio
-from typing import Any, Tuple
+import json
+import os
+from typing import Any, Dict, Tuple
 
 import yaml
 from loguru import logger
@@ -15,6 +17,7 @@ from pythclient.solana import (
 from throttler import Throttler
 
 from pyth_observer.check import PriceFeedState, PublisherState
+from pyth_observer.coingecko import get_coingecko_prices
 from pyth_observer.dispatch import Dispatch
 
 from .dns import get_key  # noqa
@@ -23,6 +26,8 @@ PYTHTEST_HTTP_ENDPOINT = "https://api.pythtest.pyth.network/"
 PYTHTEST_WS_ENDPOINT = "wss://api.pythtest.pyth.network/"
 PYTHNET_HTTP_ENDPOINT = "https://pythnet.rpcpool.com/"
 PYTHNET_WS_ENDPOINT = "wss://pythnet.rpcpool.com/"
+
+ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
 def get_solana_urls(network) -> Tuple[str, str]:
@@ -40,34 +45,45 @@ def get_solana_urls(network) -> Tuple[str, str]:
 
 
 class Observer:
-    def __init__(self, config: Any, publishers: Any):
+    def __init__(self, config: Any, publishers: Any, coingecko_mapping: Any):
         self.config = config
         self.publishers = publishers
+        self.coingecko_mapping = coingecko_mapping
 
     async def run(self):
         async with PythClient(
-            solana_endpoint="https://rpc.mainnet.pyth.network",
-            solana_ws_endpoint="wss://api.mainnet-beta.solana.com",
-            first_mapping_account_key="AHtgzX45WTKfkPG53L6WYhGEXwQkN1BVknET3sVsLL8J",
+            solana_endpoint=self.config["network"]["http_endpoint"],
+            solana_ws_endpoint=self.config["network"]["ws_endpoint"],
+            first_mapping_account_key=self.config["network"]["first_mapping"],
         ) as pyth:
-            rate_limit = Throttler(rate_limit=10, period=1.0)
+            pyth_rate_limit = Throttler(rate_limit=10, period=1)
+            coingecko_rate_limit = Throttler(rate_limit=1, period=60)
             dispatch = Dispatch(self.config, self.publishers)
 
             while True:
                 logger.info("Running checks")
 
-                async with rate_limit:
+                async with pyth_rate_limit:
                     await pyth.refresh_all_prices()
 
-                async with rate_limit:
+                async with pyth_rate_limit:
                     products = await pyth.get_products()
+
+                async with coingecko_rate_limit:
+                    data = await get_coingecko_prices(self.coingecko_mapping)
+                    coingecko_prices: Dict[str, float] = {}
+                    coingecko_updates: Dict[str, int] = {}  # Unix timestamps
+
+                    for symbol in data:
+                        coingecko_prices[symbol] = data[symbol]["usd"]
+                        coingecko_updates[symbol] = data[symbol]["last_updated_at"]
 
                 for product in products:
                     # Skip tombstone accounts with blank metadata
                     if "base" not in product.attrs:
                         continue
 
-                    async with rate_limit:
+                    async with pyth_rate_limit:
                         price_accounts = await product.get_prices()
 
                     states = []
@@ -83,6 +99,12 @@ class Observer:
                                 slot_aggregate=price_account.aggregate_price_info.pub_slot,
                                 price_aggregate=price_account.aggregate_price_info.price,
                                 confidence_interval_aggregate=price_account.aggregate_price_info.confidence_interval,
+                                coingecko_price=coingecko_prices.get(
+                                    product.attrs["base"]
+                                ),
+                                coingecko_update=coingecko_updates.get(
+                                    product.attrs["base"]
+                                ),
                             )
                         )
 

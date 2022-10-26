@@ -1,4 +1,5 @@
 import datetime
+import time
 from dataclasses import dataclass
 from typing import Any, Dict
 from loguru import logger
@@ -22,6 +23,8 @@ class PriceFeedState:
     slot_aggregate: int
     price_aggregate: float
     confidence_interval_aggregate: float
+    coingecko_price: float
+    coingecko_update: float
 
 
 class PriceFeedCheck:
@@ -32,9 +35,14 @@ class PriceFeedCheck:
 
     def run(self) -> bool:
         """
-        Run the check and return whether in passed
+        Run the check and return whether it passed
         """
-        raise RuntimeError("Not implemented")
+        logger.debug(
+            f"{self.__class__.__name__} for {self.state.symbol} on {self.state.public_key}"
+        )
+        logger.debug(self.state)
+
+        return True
 
     def metadata(self) -> dict:
         """
@@ -49,17 +57,38 @@ class PriceFeedCheck:
 
 
 class PriceFeedCoinGeckoCheck(PriceFeedCheck):
-    """
-    Price feed must not be too far away from CoinGecko.
-    """
-
-    # TODO
-
-    def __init__(self, state: PriceFeedState, _config: ConfigDict):
+    def __init__(self, state: PriceFeedState, config: ConfigDict):
         super().__init__(state)
 
+        self.max_deviation: int = config["max_deviation"]  # Percentage
+        self.max_staleness: int = config["max_staleness"]  # Seconds
+
     def run(self) -> bool:
-        return True
+        super().run()
+
+        # Skip if no CoinGecko price
+        if not self.state.coingecko_price or not self.state.coingecko_update:
+            return True
+
+        # Skip if stale CoinGecko price
+        if self.state.coingecko_update + self.max_staleness < time.time():
+            return True
+
+        # Skip if not trading
+        if self.state.status != PythPriceStatus.TRADING:
+            return True
+
+        deviation = (
+            abs(self.state.price_aggregate - self.state.coingecko_price)
+            / self.state.coingecko_price
+        )
+
+        # Pass if deviation is less than max deviation
+        if deviation < self.max_deviation:
+            return True
+
+        # Fail
+        return False
 
 
 class PriceFeedCrossChainOfflineCheck(PriceFeedCheck):
@@ -73,6 +102,8 @@ class PriceFeedCrossChainOfflineCheck(PriceFeedCheck):
         super().__init__(state)
 
     def run(self) -> bool:
+        super().run()
+
         return True
 
 
@@ -87,14 +118,12 @@ class PriceFeedCrossChainDeviationCheck(PriceFeedCheck):
         super().__init__(state)
 
     def run(self) -> bool:
+        super().run()
+
         return True
 
 
 class PriceFeedOfflineCheck(PriceFeedCheck):
-    """
-    Price feed must have been updated within `max_slot_distance` slot and status must not be `unknown`.
-    """
-
     max_slot_distance: int
 
     def __init__(self, state: PriceFeedState, config: ConfigDict):
@@ -103,19 +132,29 @@ class PriceFeedOfflineCheck(PriceFeedCheck):
         self.max_slot_distance = config["max_slot_distance"]
 
     def run(self) -> bool:
-        calendar = HolidayCalendar()
-        delta = abs(self.state.slot - self.state.slot_aggregate)
-        trading = self.state.status == PythPriceStatus.TRADING
-        market_open = calendar.is_market_open(
+        super().run()
+
+        is_market_open = HolidayCalendar().is_market_open(
             self.state.asset_type,
             datetime.datetime.now(tz=pytz.timezone("America/New_York")),
         )
 
-        if delta > 25 or not trading:
-            if market_open:
-                return False
+        # Skip if market is not open
+        if not is_market_open:
+            return True
 
-        return True
+        # Skip if not trading
+        if self.state.status != PythPriceStatus.TRADING:
+            return True
+
+        distance = abs(self.state.slot - self.state.slot_aggregate)
+
+        # Pass if distance is less than max slot distance
+        if distance < self.max_slot_distance:
+            return True
+
+        # Fail
+        return False
 
 
 @dataclass
@@ -139,9 +178,14 @@ class PublisherCheck:
 
     def run(self) -> bool:
         """
-        Run the check and return whether in passed
+        Run the check and return whether it passed
         """
-        raise RuntimeError("Not implemented")
+        logger.debug(
+            f"{self.__class__.__name__} for {self.state.symbol} on {self.state.public_key}"
+        )
+        logger.debug(self.state)
+
+        return True
 
     def metadata(self) -> dict:
         """
@@ -170,6 +214,8 @@ class PublisherAggregateCheck(PublisherCheck):
         self.max_interval_distance = config["max_interval_distance"]
 
     def run(self) -> bool:
+        super().run()
+
         delta = self.state.price - self.state.price_aggregate
 
         if self.state.confidence_interval != 0:
@@ -195,6 +241,8 @@ class PublisherConfidenceIntervalCheck(PublisherCheck):
         self.min_confidence_interval = config["min_confidence_interval"]
 
     def run(self) -> bool:
+        super().run()
+
         is_positive = self.state.confidence_interval > self.min_confidence_interval
         is_trading = self.state.status == PythPriceStatus.TRADING
 
@@ -217,6 +265,8 @@ class PublisherOfflineCheck(PublisherCheck):
         self.max_slot_distance = config["max_slot_distance"]
 
     def run(self) -> bool:
+        super().run()
+
         distance = abs(self.state.slot - self.state.slot_aggregate)
 
         if distance > 25:
@@ -227,41 +277,38 @@ class PublisherOfflineCheck(PublisherCheck):
 
 class PublisherPriceCheck(PublisherCheck):
     """
-    Publisher price must be within `max_aggregate_distance`% of aggregate price.
+    Check that the publisher price is not too far from aggregate
     """
-
-    max_aggregate_distance: int
-    max_slot_distance: int
 
     def __init__(self, state: PublisherState, config: ConfigDict):
         super().__init__(state)
 
-        self.max_aggregate_distance = config["max_aggregate_distance"]
-        self.max_slot_distance = config["max_slot_distance"]
+        self.max_aggregate_distance: int = config["max_aggregate_distance"]  # %
+        self.max_slot_distance: int = config["max_slot_distance"]  # Slots
 
     def run(self) -> bool:
-        logger.debug(
-            f"{self.__class__.__name__} for {self.state.symbol} on {self.state.public_key}"
-        )
-        logger.debug(self.state)
+        super().run()
 
         price_delta = abs(self.state.price - self.state.price_aggregate)
         slot_delta = abs(self.state.slot - self.state.slot_aggregate)
 
-        # Ignore check if publisher isn't trading
+        # Skip if not trading
         if self.state.status != PythPriceStatus.TRADING:
             return True
 
-        # Ignore check if publisher is too far behind
+        # Skip if publisher is too far behind
         if slot_delta > self.max_slot_distance:
             return True
 
+        # Skip if no aggregate
         if self.state.price_aggregate == 0:
             return True
 
-        deviation = (price_delta / self.state.price_aggregate) * 100
+        distance = (price_delta / self.state.price_aggregate) * 100
 
-        if deviation > self.max_aggregate_distance:
-            return False
+        # Pass if deviation is less than max distance
+        if distance <= self.max_aggregate_distance:
+            return True
 
-        return True
+        # Fail
+        return False

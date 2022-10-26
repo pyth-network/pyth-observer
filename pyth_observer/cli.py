@@ -10,14 +10,32 @@ from pyth_observer import Observer
 
 
 @click.command()
-def run():
-    config = yaml.safe_load(open("config.yaml", "r"))
-    publishers = yaml.safe_load(open("publishers.yaml", "r"))
-    publishers_inverted = {v: k for k, v in publishers.items()}
-    observer = Observer(config, publishers_inverted)
+@click.option(
+    "--config",
+    help="Path to YAML/JSON file with general config",
+    envvar="CONFIG",
+    required=True,
+)
+@click.option(
+    "--publishers",
+    help="Path to YAML/JSON file with publisher name-key associations",
+    envvar="PUBLISHERS",
+    required=True,
+)
+@click.option(
+    "--coingecko-mapping",
+    help="Path to YAML/JSON file with Coingecko mappings",
+    envvar="COINGECKO_MAPPING",
+    required=True,
+)
+def run(config, publishers, coingecko_mapping):
+    config_ = yaml.safe_load(open(config, "r"))
+    publishers_ = yaml.safe_load(open(publishers, "r"))
+    publishers_inverted = {v: k for k, v in publishers_.items()}
+    coingecko_mapping_ = yaml.safe_load(open(coingecko_mapping, "r"))
+    observer = Observer(config_, publishers_inverted, coingecko_mapping_)
 
     asyncio.run(observer.run())
-    pass
 
 
 logger.remove()

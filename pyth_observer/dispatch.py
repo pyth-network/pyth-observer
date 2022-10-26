@@ -34,9 +34,8 @@ PUBLISHER_CHECKS = [
 
 class Dispatch:
     """
-    Dispatch is responsible for loading the correct configuration for each
-    check/state pair, running the check, and running notifiers for the checks
-    that failed.
+    Load configuration for each check/state pair, run the check, and run
+    notifiers for the checks that failed.
     """
 
     def __init__(self, config, publishers):
