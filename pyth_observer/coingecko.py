@@ -14,7 +14,7 @@ cg = CoinGeckoAPI()
 
 
 def get_coingecko_symbol_to_id_mapping():
-    with open(f"{ROOT_DIR}/coingecko_mapping.json") as json_file:
+    with open(f"{ROOT_DIR}/../coingecko_mapping.json") as json_file:
         data = json.load(json_file)
 
     return data
@@ -33,10 +33,14 @@ api_to_symbol_mapping = {
 async def get_coingecko_prices(symbols):
     ids = [symbol_to_id_mapping[x]["api"] for x in symbol_to_id_mapping if x in symbols]
     try:
-        prices = cg.get_price(ids=ids, vs_currencies="usd", include_last_updated_at=True)
+        prices = cg.get_price(
+            ids=ids, vs_currencies="usd", include_last_updated_at=True
+        )
     except (ValueError, HTTPError) as exc:
         logger.exception(exc)
-        logger.error("CoinGecko API call failed - CoinGecko price comparisons not available.")
+        logger.error(
+            "CoinGecko API call failed - CoinGecko price comparisons not available."
+        )
         prices = {}
 
     # remap to symbol -> prices
