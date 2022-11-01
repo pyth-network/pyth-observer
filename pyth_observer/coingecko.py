@@ -4,9 +4,7 @@ import os
 from loguru import logger
 from pycoingecko import CoinGeckoAPI
 from requests.exceptions import HTTPError
-
 from throttler import throttle
-
 
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 

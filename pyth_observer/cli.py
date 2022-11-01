@@ -1,9 +1,9 @@
 import asyncio
-import yaml
 import os
 import sys
 
 import click
+import yaml
 from loguru import logger
 
 from pyth_observer import Observer

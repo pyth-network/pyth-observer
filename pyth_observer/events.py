@@ -1,14 +1,13 @@
+import datetime
 import os
 import time
-import datetime
-import pytz
-from typing import Tuple, List, Optional
+from typing import List, Optional, Tuple
 
+import pytz
 from pythclient.pythaccounts import EmaType, PythPriceStatus
 
 from pyth_observer.calendar import HolidayCalendar
 from pyth_observer.coingecko import get_coingecko_market_id
-
 
 # The validators for Prices
 price_validators = []

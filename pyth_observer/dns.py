@@ -1,7 +1,8 @@
 import ast
+from typing import Optional
+
 import dns.resolver
 from loguru import logger
-from typing import Optional
 
 DEFAULT_VERSION = "v2"
 

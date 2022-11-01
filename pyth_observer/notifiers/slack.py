@@ -1,11 +1,10 @@
 # Notify slack via a webhook url
 #
 
-from .notification import NotificationBase
-
 import aiohttp
-
 from loguru import logger
+
+from .notification import NotificationBase
 
 
 class Notifier(NotificationBase):

@@ -1,9 +1,9 @@
 #
 # A simple notifier that just logs to the logging framework
 
-from .notification import NotificationBase
-
 from loguru import logger
+
+from .notification import NotificationBase
 
 
 class Notifier(NotificationBase):
