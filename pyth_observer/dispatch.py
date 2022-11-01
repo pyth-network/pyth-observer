@@ -2,13 +2,15 @@ from typing import Any, Dict, List, Union
 
 from loguru import logger
 
-from pyth_observer.check import (
+from pyth_observer.checks.price_feed import (
     PriceFeedCheck,
     PriceFeedCoinGeckoCheck,
     PriceFeedCrossChainDeviationCheck,
-    PriceFeedCrossChainOfflineCheck,
-    PriceFeedOfflineCheck,
+    PriceFeedCrossChainOnlineCheck,
+    PriceFeedOnlineCheck,
     PriceFeedState,
+)
+from pyth_observer.checks.publisher import (
     PublisherAggregateCheck,
     PublisherCheck,
     PublisherConfidenceIntervalCheck,
@@ -20,8 +22,8 @@ from pyth_observer.check import (
 PRICE_FEED_CHECKS = [
     PriceFeedCoinGeckoCheck,
     PriceFeedCrossChainDeviationCheck,
-    PriceFeedCrossChainOfflineCheck,
-    PriceFeedOfflineCheck,
+    PriceFeedCrossChainOnlineCheck,
+    PriceFeedOnlineCheck,
 ]
 
 PUBLISHER_CHECKS = [
