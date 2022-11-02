@@ -41,8 +41,8 @@ pytest-cov = "^4.0.0"
 poethepoet = "^0.16.4"
 isort = "^5.10.1"
 black = "^22.10.0"
-mypy = "^0.982"
 ipdb = "^0.13.9"
+pyright = "^1.1.278"
 
 [tool.poetry.scripts]
 pyth-observer = "pyth_observer.cli:run"
