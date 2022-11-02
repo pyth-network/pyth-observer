@@ -21,7 +21,7 @@ loguru = "^0.6.0"
 pytz = "^2022.4"
 pycoingecko = "2.2.0"
 throttler = "1.2.1"
-datadog-api-client = "2.3.0"
+datadog-api-client = {extras = ["async"], version = "^2.5.0"}
 click = "^8.1.3"
 pyyaml = "^6.0"
 types-pyyaml = "^6.0.12"
