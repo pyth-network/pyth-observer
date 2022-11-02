@@ -31,11 +31,6 @@ class PublisherCheck:
         """
         Run the check and return whether it passed
         """
-        logger.debug(
-            f"{self.__class__.__name__} for {self.state.symbol} on {self.state.public_key}"
-        )
-        logger.debug(self.state)
-
         return True
 
     def metadata(self) -> dict:
