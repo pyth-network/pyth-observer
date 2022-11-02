@@ -15,10 +15,13 @@ from pythclient.solana import (
 )
 from throttler import Throttler
 
-from pyth_observer.checks.price_feed import CrosschainPrice, PriceFeedState
+from pyth_observer.checks.price_feed import PriceFeedState
 from pyth_observer.checks.publisher import PublisherState
 from pyth_observer.coingecko import get_coingecko_prices
-from pyth_observer.crosschain import CrosschainPriceObserver as Crosschain
+from pyth_observer.crosschain import (
+    CrosschainPrice,
+    CrosschainPriceObserver as Crosschain,
+)
 from pyth_observer.dispatch import Dispatch
 
 PYTHTEST_HTTP_ENDPOINT = "https://api.pythtest.pyth.network/"
@@ -74,16 +77,25 @@ class Observer:
                 if "base" not in product.attrs:
                     continue
 
+                if not product.first_price_account_key:
+                    continue
+
                 # For each product, we build a list of price feed states (one
                 # for each price account) and a list of publisher states (one
                 # for each publisher).
                 states = []
                 price_accounts = await self.get_pyth_prices(product)
-                crosschain_price = crosschain_prices.get(
+                crosschain_price = crosschain_prices[
                     b58decode(product.first_price_account_key.key).hex()
-                )
+                ]
 
                 for _, price_account in price_accounts.items():
+                    if not price_account.aggregate_price_status:
+                        raise RuntimeError("Price account status is missing")
+
+                    if not price_account.aggregate_price_info:
+                        raise RuntimeError("Aggregate price info is missing")
+
                     states.append(
                         PriceFeedState(
                             symbol=product.attrs["symbol"],
@@ -117,7 +129,7 @@ class Observer:
                             )
                         )
 
-                self.dispatch.run(states)
+                await self.dispatch.run(states)
 
             logger.debug("Sleeping...")
             await asyncio.sleep(5)

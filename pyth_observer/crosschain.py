@@ -1,3 +1,5 @@
+from typing import Dict, TypedDict
+
 import requests
 from aiohttp import ClientSession
 from loguru import logger
@@ -5,22 +7,26 @@ from more_itertools import chunked
 from throttler import throttle
 
 
+class CrosschainPrice(TypedDict):
+    price: float
+    conf: float
+    publish_time: int  # UNIX timestamp
+
+
 class CrosschainPriceObserver:
     def __init__(self, url):
         self.url = url
         self.valid = self.is_endpoint_valid()
 
-    def is_endpoint_valid(self):
+    def is_endpoint_valid(self) -> bool:
         try:
-            r = requests.head(self.url)
-            if r.status_code == 200:
-                return True
+            return requests.head(self.url).status_code == 200
         except requests.ConnectionError:
             logger.error("failed to connect to cross-chain api")
             return False
 
     @throttle(rate_limit=1, period=1)
-    async def get_crosschain_prices(self):
+    async def get_crosschain_prices(self) -> Dict[str, CrosschainPrice]:
         async with ClientSession(
             headers={"content-type": "application/json"}
         ) as session:

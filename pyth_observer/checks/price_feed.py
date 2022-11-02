@@ -1,22 +1,15 @@
 import datetime
 import time
 from dataclasses import dataclass
-from typing import Any, Dict, TypedDict
+from typing import Any, Dict, Optional, List, cast
 
 import pytz
 from loguru import logger
+from pyth_observer.calendar import HolidayCalendar
+from pyth_observer.crosschain import CrosschainPrice
+from pyth_observer.checks import Config
 from pythclient.pythaccounts import PythPriceStatus
 from pythclient.solana import SolanaPublicKey
-
-from pyth_observer.calendar import HolidayCalendar
-
-ConfigDict = Dict[str, Any]
-
-
-class CrosschainPrice(TypedDict):
-    price: float
-    conf: float
-    publish_time: int  # UNIX timestamp
 
 
 @dataclass
@@ -29,49 +22,22 @@ class PriceFeedState:
     slot_aggregate: int
     price_aggregate: float
     confidence_interval_aggregate: float
-    coingecko_price: float
-    coingecko_update: float
-    crosschain_price: Dict[str, Any]
+    coingecko_price: Optional[float]
+    coingecko_update: Optional[int]
+    crosschain_price: CrosschainPrice
 
 
-class PriceFeedCheck:
-    state: PriceFeedState
-
-    def __init__(self, state: PriceFeedState, _config: ConfigDict = {}):
-        self.state = state
-
-    def run(self) -> bool:
-        """
-        Run the check and return whether it passed
-        """
-        return True
-
-    def metadata(self) -> dict:
-        """
-        Generate check metadata for alerting
-        """
-        raise RuntimeError("Not implemented")
-
-    def log_entry(self) -> str:
-        result = "passed" if self.run() else "failed"
-
-        return f"Check {result}: {self.__class__.__name__} for {self.state.symbol}"
-
-
-class PriceFeedCoinGeckoCheck(PriceFeedCheck):
+class PriceFeedCoinGeckoCheck:
     """
     Price feed, if trading, must not be too far from Coingecko's price.
     """
 
-    def __init__(self, state: PriceFeedState, config: ConfigDict):
-        super().__init__(state)
-
-        self.max_deviation: int = config["max_deviation"]  # Percentage
-        self.max_staleness: int = config["max_staleness"]  # Seconds
+    def __init__(self, state: PriceFeedState, config: Config):
+        self.state = state
+        self.max_deviation: int = int(config["max_deviation"])  # Percentage
+        self.max_staleness: int = int(config["max_staleness"])  # Seconds
 
     def run(self) -> bool:
-        super().run()
-
         # Skip if no CoinGecko price
         if not self.state.coingecko_price or not self.state.coingecko_update:
             return True
@@ -97,49 +63,39 @@ class PriceFeedCoinGeckoCheck(PriceFeedCheck):
         return False
 
 
-class PriceFeedConfidenceIntervalCheck(PriceFeedCheck):
+class PriceFeedConfidenceIntervalCheck:
     """
     Price feed's confidence interval, if trading, must be greater than zero
     """
 
-    def __init__(self, state: PriceFeedState, _config: ConfigDict):
-        super().__init__(state)
+    def __init__(self, state: PriceFeedState, config: Config):
+        self.state = state
+        self.min_confidence_interval: int = int(config["min_confidence_interval"])
 
     def run(self) -> bool:
-        super().run()
-
         # Skip if not trading
         if self.state.status != PythPriceStatus.TRADING:
             return True
 
         # Pass if confidence interval is greater than zero
-        if self.state.confidence_interval_aggregate > 0:
+        if self.state.confidence_interval_aggregate > self.min_confidence_interval:
             return True
 
         # Fail
         return False
 
 
-class PriceFeedCrossChainOnlineCheck(PriceFeedCheck):
+class PriceFeedCrossChainOnlineCheck:
     """
     Price feed, if trading, must have published a price at the price service no
     more than `max_staleness` seconds ago.
     """
 
-    max_staleness: int  # Seconds
-
-    def __init__(self, state: PriceFeedState, config: ConfigDict):
-        super().__init__(state)
-
-        self.max_staleness = config["max_staleness"]
+    def __init__(self, state: PriceFeedState, config: Config):
+        self.state = state
+        self.max_staleness: int = int(config["max_staleness"])
 
     def run(self) -> bool:
-        super().run()
-
-        # Skip if no crosschain price
-        if not self.state.crosschain_price:
-            return True
-
         # Skip if publish time is zero
         if not self.state.crosschain_price["publish_time"]:
             return True
@@ -163,27 +119,17 @@ class PriceFeedCrossChainOnlineCheck(PriceFeedCheck):
         return False
 
 
-class PriceFeedCrossChainDeviationCheck(PriceFeedCheck):
+class PriceFeedCrossChainDeviationCheck:
     """
     Price feed must not be too far away from its corresponding at the price service.
     """
 
-    max_deviation: int  # Percentage
-    max_staleness: int  # Seconds
-
-    def __init__(self, state: PriceFeedState, config: ConfigDict):
-        super().__init__(state)
-
-        self.max_deviation = config["max_deviation"]
-        self.max_staleness = config["max_staleness"]
+    def __init__(self, state: PriceFeedState, config: Config):
+        self.state = state
+        self.max_deviation: int = int(config["max_deviation"])
+        self.max_staleness: int = int(config["max_staleness"])
 
     def run(self) -> bool:
-        super().run()
-
-        # Skip if no crosschain price
-        if not self.state.crosschain_price:
-            return True
-
         # Skip if not trading
         if self.state.status != PythPriceStatus.TRADING:
             return True
@@ -216,21 +162,16 @@ class PriceFeedCrossChainDeviationCheck(PriceFeedCheck):
         return False
 
 
-class PriceFeedOnlineCheck(PriceFeedCheck):
+class PriceFeedOnlineCheck:
     """
     Price feed must be online
     """
 
-    max_slot_distance: int
-
-    def __init__(self, state: PriceFeedState, config: ConfigDict):
-        super().__init__(state)
-
-        self.max_slot_distance = config["max_slot_distance"]
+    def __init__(self, state: PriceFeedState, config: Config):
+        self.state = state
+        self.max_slot_distance: int = int(config["max_slot_distance"])
 
     def run(self) -> bool:
-        super().run()
-
         is_market_open = HolidayCalendar().is_market_open(
             self.state.asset_type,
             datetime.datetime.now(tz=pytz.timezone("America/New_York")),
@@ -252,3 +193,11 @@ class PriceFeedOnlineCheck(PriceFeedCheck):
 
         # Fail
         return False
+
+
+PRICE_FEED_CHECKS = [
+    PriceFeedCoinGeckoCheck,
+    PriceFeedCrossChainDeviationCheck,
+    PriceFeedCrossChainOnlineCheck,
+    PriceFeedOnlineCheck,
+]

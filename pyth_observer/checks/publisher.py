@@ -1,11 +1,9 @@
 from dataclasses import dataclass
-from typing import Any, Dict
 
-from loguru import logger
 from pythclient.pythaccounts import PythPriceStatus
 from pythclient.solana import SolanaPublicKey
 
-ConfigDict = Dict[str, Any]
+from pyth_observer.checks import Config
 
 
 @dataclass
@@ -21,120 +19,86 @@ class PublisherState:
     confidence_interval_aggregate: float
 
 
-class PublisherCheck:
-    state: PublisherState
-
-    def __init__(self, state: PublisherState, _config: ConfigDict = {}):
-        self.state = state
-
-    def run(self) -> bool:
-        """
-        Run the check and return whether it passed
-        """
-        return True
-
-    def metadata(self) -> dict:
-        """
-        Generate check metadata for alerting
-        """
-        raise RuntimeError("Not implemented")
-
-    def log_entry(self, publishers: Dict[str, str]) -> str:
-        result = "passed" if self.run() else "failed"
-        publisher = publishers[str(self.state.public_key)]
-
-        return f"Check {result}: {self.__class__.__name__} for {self.state.symbol} ({publisher}/{self.state.public_key.key[0:7]})"
-
-
-class PublisherAggregateCheck(PublisherCheck):
+class PublisherAggregateCheck:
     """
     Publisher price and confidence interval must be such that aggregate price is
     no more than `max_interval_distance` confidence intervals away.
     """
 
-    max_interval_distance: int
-
-    def __init__(self, state: PublisherState, config: ConfigDict):
-        super().__init__(state)
-
-        self.max_interval_distance = config["max_interval_distance"]
+    def __init__(self, state: PublisherState, config: Config):
+        self.state = state
+        self.max_interval_distance: int = int(config["max_interval_distance"])
 
     def run(self) -> bool:
-        super().run()
+        # Skip if confidence interval is zero
+        if self.state.confidence_interval == 0:
+            return True
 
         delta = self.state.price - self.state.price_aggregate
+        intervals_away = abs(delta / self.state.confidence_interval_aggregate)
 
-        if self.state.confidence_interval != 0:
-            intervals_away = abs(delta / self.state.confidence_interval_aggregate)
+        # Pass if price delta is less than max interval distance
+        if intervals_away < self.max_interval_distance:
+            return True
 
-            if intervals_away > self.max_interval_distance:
-                return False
-
-        return True
+        # Fail
+        return False
 
 
-class PublisherConfidenceIntervalCheck(PublisherCheck):
+class PublisherConfidenceIntervalCheck:
     """
     Publisher confidence interval must be greater than `min_confidence_interval`
     while status is `trading`.
     """
 
-    min_confidence_interval: int
-
-    def __init__(self, state: PublisherState, config: ConfigDict):
-        super().__init__(state)
-
-        self.min_confidence_interval = config["min_confidence_interval"]
+    def __init__(self, state: PublisherState, config: Config):
+        self.state = state
+        self.min_confidence_interval: int = int(config["min_confidence_interval"])
 
     def run(self) -> bool:
-        super().run()
+        # Skip if not trading
+        if not self.state.status == PythPriceStatus.TRADING:
+            return True
 
-        is_positive = self.state.confidence_interval > self.min_confidence_interval
-        is_trading = self.state.status == PythPriceStatus.TRADING
+        # Pass if confidence interval is greater than min_confidence_interval
+        if self.state.confidence_interval > self.min_confidence_interval:
+            return True
 
-        if is_trading and not is_positive:
-            return False
-
-        return True
+        # Fail
+        return False
 
 
-class PublisherOfflineCheck(PublisherCheck):
+class PublisherOfflineCheck:
     """
     Publisher must have published within 25 slots and status must not be `unkonwn`.
     """
 
-    max_slot_distance: int
-
-    def __init__(self, state: PublisherState, config: ConfigDict):
-        super().__init__(state)
-
-        self.max_slot_distance = config["max_slot_distance"]
+    def __init__(self, state: PublisherState, config: Config):
+        self.state = state
+        self.max_slot_distance: int = int(config["max_slot_distance"])
 
     def run(self) -> bool:
-        super().run()
-
         distance = abs(self.state.slot - self.state.slot_aggregate)
 
-        if distance > 25:
-            return False
+        # Pass if publisher slot is not too far from aggregate slot
+        if distance < 25:
+            return True
 
+        # Fail
         return True
 
 
-class PublisherPriceCheck(PublisherCheck):
+class PublisherPriceCheck:
     """
     Check that the publisher price is not too far from aggregate
     """
 
-    def __init__(self, state: PublisherState, config: ConfigDict):
-        super().__init__(state)
-
-        self.max_aggregate_distance: int = config["max_aggregate_distance"]  # %
-        self.max_slot_distance: int = config["max_slot_distance"]  # Slots
+    def __init__(self, state: PublisherState, config: Config):
+        self.state = state
+        self.max_aggregate_distance: int = int(config["max_aggregate_distance"])  # %
+        self.max_slot_distance: int = int(config["max_slot_distance"])  # Slots
 
     def run(self) -> bool:
-        super().run()
-
         price_delta = abs(self.state.price - self.state.price_aggregate)
         slot_delta = abs(self.state.slot - self.state.slot_aggregate)
 
@@ -158,3 +122,11 @@ class PublisherPriceCheck(PublisherCheck):
 
         # Fail
         return False
+
+
+PUBLISHER_CHECKS = [
+    PublisherAggregateCheck,
+    PublisherConfidenceIntervalCheck,
+    PublisherOfflineCheck,
+    PublisherPriceCheck,
+]

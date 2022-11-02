@@ -1,37 +1,13 @@
-from typing import Any, Dict, List, Union
+import asyncio
+from typing import Any, Awaitable, Dict, List
 
-from loguru import logger
-
-from pyth_observer.checks.price_feed import (
-    PriceFeedCheck,
-    PriceFeedCoinGeckoCheck,
-    PriceFeedCrossChainDeviationCheck,
-    PriceFeedCrossChainOnlineCheck,
-    PriceFeedOnlineCheck,
-    PriceFeedState,
-)
-from pyth_observer.checks.publisher import (
-    PublisherAggregateCheck,
-    PublisherCheck,
-    PublisherConfidenceIntervalCheck,
-    PublisherOfflineCheck,
-    PublisherPriceCheck,
-    PublisherState,
-)
-
-PRICE_FEED_CHECKS = [
-    PriceFeedCoinGeckoCheck,
-    PriceFeedCrossChainDeviationCheck,
-    PriceFeedCrossChainOnlineCheck,
-    PriceFeedOnlineCheck,
-]
-
-PUBLISHER_CHECKS = [
-    PublisherAggregateCheck,
-    PublisherConfidenceIntervalCheck,
-    PublisherOfflineCheck,
-    PublisherPriceCheck,
-]
+from pyth_observer.checks import Check, State
+from pyth_observer.checks.price_feed import PRICE_FEED_CHECKS, PriceFeedState
+from pyth_observer.checks.publisher import PUBLISHER_CHECKS, PublisherState
+from pyth_observer.events import DatadogEvent  # Used dynamically
+from pyth_observer.events import LogEvent  # Used dynamically
+from pyth_observer.events import SlackEvent  # Used dynamically
+from pyth_observer.events import Event
 
 
 class Dispatch:
@@ -44,8 +20,9 @@ class Dispatch:
         self.config = config
         self.publishers = publishers
 
-    def run(self, states: List[Union[PriceFeedState, PublisherState]]):
-        failed_checks: List[Union[PriceFeedCheck, PublisherCheck]] = []
+    async def run(self, states: List[State]):
+        # First, run each check and store the ones that failed
+        failed_checks: List[Check] = []
 
         for state in states:
             if isinstance(state, PriceFeedState):
@@ -55,17 +32,20 @@ class Dispatch:
             else:
                 raise RuntimeError("Unknown state")
 
-        # TODO: Dispatch failed checks to notifiers
-        for check in failed_checks:
-            if isinstance(check, PriceFeedCheck):
-                logger.warning(check.log_entry())
-            elif isinstance(check, PublisherCheck):
-                logger.warning(check.log_entry(self.publishers))
-            else:
-                raise RuntimeError("Unknown check")
+        # Then, wrap each failed check in events and send them
+        sent_events: List[Awaitable] = []
+        context = {"network": self.config["network"]["name"]}
 
-    def check_price_feed(self, state: PriceFeedState) -> List[PriceFeedCheck]:
-        failed_checks: List[PriceFeedCheck] = []
+        for check in failed_checks:
+            for event_type in self.config["events"]:
+                event: Event = globals()[event_type](check, context)
+
+                sent_events.append(event.send())
+
+        await asyncio.gather(*sent_events)
+
+    def check_price_feed(self, state: PriceFeedState) -> List[Check]:
+        failed_checks: List[Check] = []
 
         for check_class in PRICE_FEED_CHECKS:
             config = self.load_config(check_class.__name__, state.symbol)
@@ -76,8 +56,8 @@ class Dispatch:
 
         return failed_checks
 
-    def check_publisher(self, state) -> List[PublisherCheck]:
-        failed_checks: List[PublisherCheck] = []
+    def check_publisher(self, state) -> List[Check]:
+        failed_checks: List[Check] = []
 
         for check_class in PUBLISHER_CHECKS:
             config = self.load_config(check_class.__name__, state.symbol)
