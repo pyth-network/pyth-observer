@@ -1,13 +1,13 @@
 import datetime
 import time
 from dataclasses import dataclass
-from typing import Any, Dict, Optional, List, cast
+from textwrap import dedent
+from typing import Dict, Optional, Protocol, runtime_checkable
 
+import arrow
 import pytz
-from loguru import logger
 from pyth_observer.calendar import HolidayCalendar
 from pyth_observer.crosschain import CrosschainPrice
-from pyth_observer.checks import Config
 from pythclient.pythaccounts import PythPriceStatus
 from pythclient.solana import SolanaPublicKey
 
@@ -27,81 +27,114 @@ class PriceFeedState:
     crosschain_price: CrosschainPrice
 
 
-class PriceFeedCoinGeckoCheck:
-    """
-    Price feed, if trading, must not be too far from Coingecko's price.
-    """
+PriceFeedCheckConfig = Dict[str, str | float | int | bool]
 
-    def __init__(self, state: PriceFeedState, config: Config):
-        self.state = state
-        self.max_deviation: int = int(config["max_deviation"])  # Percentage
-        self.max_staleness: int = int(config["max_staleness"])  # Seconds
+
+@runtime_checkable
+class PriceFeedCheck(Protocol):
+    def __init__(self, state: PriceFeedState, config: PriceFeedCheckConfig):
+        ...
+
+    def state(self) -> PriceFeedState:
+        ...
+
+    def run(self) -> bool:
+        ...
+
+    def error_message(self) -> str:
+        ...
+
+
+class PriceFeedCoinGeckoCheck(PriceFeedCheck):
+    def __init__(self, state: PriceFeedState, config: PriceFeedCheckConfig):
+        self.__state = state
+        self.__max_deviation: int = int(config["max_deviation"])  # Percentage
+        self.__max_staleness: int = int(config["max_staleness"])  # Seconds
+
+    def state(self) -> PriceFeedState:
+        return self.__state
 
     def run(self) -> bool:
         # Skip if no CoinGecko price
-        if not self.state.coingecko_price or not self.state.coingecko_update:
+        if not self.__state.coingecko_price or not self.__state.coingecko_update:
             return True
 
         # Skip if stale CoinGecko price
-        if self.state.coingecko_update + self.max_staleness < time.time():
+        if self.__state.coingecko_update + self.__max_staleness < time.time():
             return True
 
         # Skip if not trading
-        if self.state.status != PythPriceStatus.TRADING:
+        if self.__state.status != PythPriceStatus.TRADING:
             return True
 
         deviation = (
-            abs(self.state.price_aggregate - self.state.coingecko_price)
-            / self.state.coingecko_price
+            abs(self.__state.price_aggregate - self.__state.coingecko_price)
+            / self.__state.coingecko_price
         )
 
         # Pass if deviation is less than max deviation
-        if deviation < self.max_deviation:
+        if deviation < self.__max_deviation:
             return True
 
         # Fail
         return False
 
+    def error_message(self) -> str:
+        return dedent(
+            f"""
+            {self.__state.symbol} is too far from Coingecko's price.
 
-class PriceFeedConfidenceIntervalCheck:
-    """
-    Price feed's confidence interval, if trading, must be greater than zero
-    """
+            Pyth price: {self.__state.price_aggregate}
+            Coingecko price: {self.__state.coingecko_price}
+            """
+        ).strip()
 
-    def __init__(self, state: PriceFeedState, config: Config):
-        self.state = state
-        self.min_confidence_interval: int = int(config["min_confidence_interval"])
+
+class PriceFeedConfidenceIntervalCheck(PriceFeedCheck):
+    def __init__(self, state: PriceFeedState, config: PriceFeedCheckConfig):
+        self.__state = state
+        self.__min_confidence_interval: int = int(config["min_confidence_interval"])
+
+    def state(self) -> PriceFeedState:
+        return self.__state
 
     def run(self) -> bool:
         # Skip if not trading
-        if self.state.status != PythPriceStatus.TRADING:
+        if self.__state.status != PythPriceStatus.TRADING:
             return True
 
         # Pass if confidence interval is greater than zero
-        if self.state.confidence_interval_aggregate > self.min_confidence_interval:
+        if self.__state.confidence_interval_aggregate > self.__min_confidence_interval:
             return True
 
         # Fail
         return False
 
+    def error_message(self) -> str:
+        return dedent(
+            f"""
+            {self.__state.symbol} confidence interval is too low.
 
-class PriceFeedCrossChainOnlineCheck:
-    """
-    Price feed, if trading, must have published a price at the price service no
-    more than `max_staleness` seconds ago.
-    """
+            Confidence interval: {self.__state.confidence_interval_aggregate}
+            """
+        ).strip()
 
-    def __init__(self, state: PriceFeedState, config: Config):
-        self.state = state
-        self.max_staleness: int = int(config["max_staleness"])
+
+class PriceFeedCrossChainOnlineCheck(PriceFeedCheck):
+    def __init__(self, state: PriceFeedState, config: PriceFeedCheckConfig):
+        self.__state = state
+        self.__max_staleness: int = int(config["max_staleness"])
+
+    def state(self) -> PriceFeedState:
+        return self.__state
 
     def run(self) -> bool:
         # Skip if publish time is zero
-        if not self.state.crosschain_price["publish_time"]:
+        if not self.__state.crosschain_price["publish_time"]:
             return True
 
         is_market_open = HolidayCalendar().is_market_open(
-            self.state.asset_type,
+            self.__state.asset_type,
             datetime.datetime.now(tz=pytz.timezone("America/New_York")),
         )
 
@@ -109,33 +142,43 @@ class PriceFeedCrossChainOnlineCheck:
         if not is_market_open:
             return True
 
-        staleness = int(time.time()) - self.state.crosschain_price["publish_time"]
+        staleness = int(time.time()) - self.__state.crosschain_price["publish_time"]
 
         # Pass if current staleness is less than `max_staleness`
-        if staleness < self.max_staleness:
+        if staleness < self.__max_staleness:
             return True
 
         # Fail
         return False
 
+    def error_message(self) -> str:
+        publish_time = arrow.get(self.__state.crosschain_price["publish_time"])
 
-class PriceFeedCrossChainDeviationCheck:
-    """
-    Price feed must not be too far away from its corresponding at the price service.
-    """
+        return dedent(
+            f"""
+            {self.__state.symbol} isn't online at the price service.
 
-    def __init__(self, state: PriceFeedState, config: Config):
-        self.state = state
-        self.max_deviation: int = int(config["max_deviation"])
-        self.max_staleness: int = int(config["max_staleness"])
+            Last publish time: {publish_time.format('YYYY-MM-DD HH:mm:ss ZZ')}
+            """
+        ).strip()
+
+
+class PriceFeedCrossChainDeviationCheck(PriceFeedCheck):
+    def __init__(self, state: PriceFeedState, config: PriceFeedCheckConfig):
+        self.__state = state
+        self.__max_deviation: int = int(config["max_deviation"])
+        self.__max_staleness: int = int(config["max_staleness"])
+
+    def state(self) -> PriceFeedState:
+        return self.__state
 
     def run(self) -> bool:
         # Skip if not trading
-        if self.state.status != PythPriceStatus.TRADING:
+        if self.__state.status != PythPriceStatus.TRADING:
             return True
 
         is_market_open = HolidayCalendar().is_market_open(
-            self.state.asset_type,
+            self.__state.asset_type,
             datetime.datetime.now(tz=pytz.timezone("America/New_York")),
         )
 
@@ -143,37 +186,46 @@ class PriceFeedCrossChainDeviationCheck:
         if not is_market_open:
             return True
 
-        staleness = int(time.time()) - self.state.crosschain_price["publish_time"]
+        staleness = int(time.time()) - self.__state.crosschain_price["publish_time"]
 
         # Skip if price is stale
-        if staleness > self.max_staleness:
+        if staleness > self.__max_staleness:
             return True
 
         deviation = (
-            abs(self.state.crosschain_price["price"] - self.state.price_aggregate)
-            / self.state.price_aggregate
+            abs(self.__state.crosschain_price["price"] - self.__state.price_aggregate)
+            / self.__state.price_aggregate
         ) * 100
 
         # Pass if price isn't higher than maxium deviation
-        if deviation < self.max_deviation:
+        if deviation < self.__max_deviation:
             return True
 
         # Fail
         return False
 
+    def error_message(self) -> str:
+        return dedent(
+            f"""
+            {self.__state.symbol} is too far at the price service.
 
-class PriceFeedOnlineCheck:
-    """
-    Price feed must be online
-    """
+            Price: {self.__state.price_aggregate}
+            Price at price service: {self.__state.crosschain_price['price']}
+            """
+        ).strip()
 
-    def __init__(self, state: PriceFeedState, config: Config):
-        self.state = state
-        self.max_slot_distance: int = int(config["max_slot_distance"])
+
+class PriceFeedOnlineCheck(PriceFeedCheck):
+    def __init__(self, state: PriceFeedState, config: PriceFeedCheckConfig):
+        self.__state = state
+        self.__max_slot_distance: int = int(config["max_slot_distance"])
+
+    def state(self) -> PriceFeedState:
+        return self.__state
 
     def run(self) -> bool:
         is_market_open = HolidayCalendar().is_market_open(
-            self.state.asset_type,
+            self.__state.asset_type,
             datetime.datetime.now(tz=pytz.timezone("America/New_York")),
         )
 
@@ -182,17 +234,27 @@ class PriceFeedOnlineCheck:
             return True
 
         # Skip if not trading
-        if self.state.status != PythPriceStatus.TRADING:
+        if self.__state.status != PythPriceStatus.TRADING:
             return True
 
-        distance = abs(self.state.slot - self.state.slot_aggregate)
+        distance = abs(self.__state.slot - self.__state.slot_aggregate)
 
         # Pass if distance is less than max slot distance
-        if distance < self.max_slot_distance:
+        if distance < self.__max_slot_distance:
             return True
 
         # Fail
         return False
+
+    def error_message(self) -> str:
+        return dedent(
+            f"""
+            {self.__state.symbol} is offline.
+
+            Slot: {self.__state.slot}
+            Aggregate price slot: {self.__state.slot_aggregate}
+            """
+        ).strip()
 
 
 PRICE_FEED_CHECKS = [

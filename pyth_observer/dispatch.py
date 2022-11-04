@@ -6,7 +6,6 @@ from pyth_observer.checks.price_feed import PRICE_FEED_CHECKS, PriceFeedState
 from pyth_observer.checks.publisher import PUBLISHER_CHECKS, PublisherState
 from pyth_observer.events import DatadogEvent  # Used dynamically
 from pyth_observer.events import LogEvent  # Used dynamically
-from pyth_observer.events import SlackEvent  # Used dynamically
 from pyth_observer.events import Event
 
 
@@ -34,7 +33,10 @@ class Dispatch:
 
         # Then, wrap each failed check in events and send them
         sent_events: List[Awaitable] = []
-        context = {"network": self.config["network"]["name"]}
+        context = {
+            "network": self.config["network"]["name"],
+            "publishers": self.publishers,
+        }
 
         for check in failed_checks:
             for event_type in self.config["events"]:

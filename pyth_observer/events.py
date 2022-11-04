@@ -1,4 +1,4 @@
-from typing import TypedDict
+from typing import TypedDict, Protocol, Dict, cast
 
 from datadog_api_client.api_client import AsyncApiClient as DatadogAPI
 from datadog_api_client.v1.model.event_alert_type import EventAlertType
@@ -10,32 +10,47 @@ from datadog_api_client.v1.model.event_create_request import (
 from loguru import logger
 
 from pyth_observer.checks import Check
+from pyth_observer.checks.price_feed import PriceFeedCheck
+from pyth_observer.checks.publisher import PublisherCheck
 
 
 class Context(TypedDict):
     network: str
+    publishers: Dict[str, str]
 
 
-class Event:
+class Event(Protocol):
     check: Check
+    context: Context
 
+    async def send(self):
+        ...
+
+
+class DatadogEvent(Event):
     def __init__(self, check: Check, context: Context):
         self.check = check
         self.context = context
 
     async def send(self):
-        raise RuntimeError("Not implemented")
+        # Publisher checks expect the key -> name mapping of publishers when
+        # generating the error title/message.
+        if self.check.__class__.__bases__ == (PublisherCheck,):
+            text = cast(PublisherCheck, self.check).error_message(
+                self.context["publishers"]
+            )
+        elif self.check.__class__.__bases__ == (PriceFeedCheck,):
+            text = cast(PriceFeedCheck, self.check).error_message()
+        else:
+            raise RuntimeError("Invalid check")
 
-
-class DatadogEvent(Event):
-    async def send(self):
         event = DatadogAPIEvent(
-            aggregation_key=f"{self.check.__class__.__name__}-{self.check.state.symbol}",
-            title=f"{self.check.__class__.__name__} failed on {self.check.state.symbol}",
-            text=self.check.error_message(),
+            aggregation_key=f"{self.check.__class__.__name__}-{self.check.state().symbol}",
+            title=text.split("\n")[0],
+            text=text,
             tags=[
                 f"network:{self.context['network']}",
-                f"symbol:{self.check.state.symbol}",
+                f"symbol:{self.check.state().symbol}",
                 f"check:{self.check.__class__.__name__}",
             ],
             alert_type=EventAlertType.WARNING,
@@ -57,9 +72,20 @@ class DatadogEvent(Event):
 
 
 class LogEvent(Event):
+    def __init__(self, check: Check, context: Context):
+        self.check = check
+        self.context = context
+
     async def send(self):
-        logger.warning(self.check.error_message())
+        # Publisher checks expect the key -> name mapping of publishers when
+        # generating the error title/message.
+        if self.check.__class__.__bases__ == (PublisherCheck,):
+            text = cast(PublisherCheck, self.check).error_message(
+                self.context["publishers"]
+            )
+        elif self.check.__class__.__bases__ == (PriceFeedCheck,):
+            text = cast(PriceFeedCheck, self.check).error_message()
+        else:
+            raise RuntimeError("Invalid check")
 
-
-class SlackEvent(Event):
-    pass
+        logger.warning(text.split("\n")[0])
