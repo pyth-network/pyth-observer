@@ -1,17 +1,17 @@
-from typing import TypedDict, Protocol, Dict, cast
+from typing import Dict, Protocol, TypedDict, cast
 
 from datadog_api_client.api_client import AsyncApiClient as DatadogAPI
-from datadog_api_client.v1.model.event_alert_type import EventAlertType
 from datadog_api_client.configuration import Configuration as DatadogConfig
 from datadog_api_client.v1.api.events_api import EventsApi as DatadogEventAPI
+from datadog_api_client.v1.model.event_alert_type import EventAlertType
 from datadog_api_client.v1.model.event_create_request import (
     EventCreateRequest as DatadogAPIEvent,
 )
 from loguru import logger
 
-from pyth_observer.checks import Check
-from pyth_observer.checks.price_feed import PriceFeedCheck
-from pyth_observer.checks.publisher import PublisherCheck
+from pyth_observer.check import Check
+from pyth_observer.check.price_feed import PriceFeedCheck
+from pyth_observer.check.publisher import PublisherCheck
 
 
 class Context(TypedDict):

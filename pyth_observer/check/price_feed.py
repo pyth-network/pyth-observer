@@ -6,10 +6,11 @@ from typing import Dict, Optional, Protocol, runtime_checkable
 
 import arrow
 import pytz
-from pyth_observer.calendar import HolidayCalendar
-from pyth_observer.crosschain import CrosschainPrice
 from pythclient.pythaccounts import PythPriceStatus
 from pythclient.solana import SolanaPublicKey
+
+from pyth_observer.calendar import HolidayCalendar
+from pyth_observer.crosschain import CrosschainPrice
 
 
 @dataclass

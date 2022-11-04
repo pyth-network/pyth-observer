@@ -1,12 +1,12 @@
-from pyth_observer.checks.price_feed import (
-    PriceFeedState,
+from pyth_observer.check.price_feed import (
     PriceFeedCheck,
     PriceFeedCheckConfig,
+    PriceFeedState,
 )
-from pyth_observer.checks.publisher import (
-    PublisherState,
+from pyth_observer.check.publisher import (
     PublisherCheck,
     PublisherCheckConfig,
+    PublisherState,
 )
 
 Check = PriceFeedCheck | PublisherCheck

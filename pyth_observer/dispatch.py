@@ -1,12 +1,15 @@
 import asyncio
 from typing import Any, Awaitable, Dict, List
 
-from pyth_observer.checks import Check, State
-from pyth_observer.checks.price_feed import PRICE_FEED_CHECKS, PriceFeedState
-from pyth_observer.checks.publisher import PUBLISHER_CHECKS, PublisherState
-from pyth_observer.events import DatadogEvent  # Used dynamically
-from pyth_observer.events import LogEvent  # Used dynamically
-from pyth_observer.events import Event
+from pyth_observer.check import Check, State
+from pyth_observer.check.price_feed import PRICE_FEED_CHECKS, PriceFeedState
+from pyth_observer.check.publisher import PUBLISHER_CHECKS, PublisherState
+from pyth_observer.event import DatadogEvent  # Used dynamically
+from pyth_observer.event import LogEvent  # Used dynamically
+from pyth_observer.event import Event
+
+assert DatadogEvent
+assert LogEvent
 
 
 class Dispatch:

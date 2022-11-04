@@ -15,13 +15,11 @@ from pythclient.solana import (
 )
 from throttler import Throttler
 
-from pyth_observer.checks.price_feed import PriceFeedState
-from pyth_observer.checks.publisher import PublisherState
+from pyth_observer.check.price_feed import PriceFeedState
+from pyth_observer.check.publisher import PublisherState
 from pyth_observer.coingecko import get_coingecko_prices
-from pyth_observer.crosschain import (
-    CrosschainPrice,
-    CrosschainPriceObserver as Crosschain,
-)
+from pyth_observer.crosschain import CrosschainPrice
+from pyth_observer.crosschain import CrosschainPriceObserver as Crosschain
 from pyth_observer.dispatch import Dispatch
 
 PYTHTEST_HTTP_ENDPOINT = "https://api.pythtest.pyth.network/"
