@@ -19,7 +19,7 @@ class PriceFeedState:
     asset_type: str
     public_key: SolanaPublicKey
     status: PythPriceStatus
-    slot: int
+    slot_aggregate_attempted: int
     slot_aggregate: int
     price_aggregate: float
     confidence_interval_aggregate: float
@@ -44,6 +44,50 @@ class PriceFeedCheck(Protocol):
 
     def error_message(self) -> str:
         ...
+
+
+class PriceFeedAggregateCheck(PriceFeedCheck):
+    def __init__(self, state: PriceFeedState, config: PriceFeedCheckConfig):
+        self.__state = state
+        self.__max_slot_distance: int = int(config["max_slot_distance"])
+
+    def state(self) -> PriceFeedState:
+        return self.__state
+
+    def run(self) -> bool:
+        is_market_open = HolidayCalendar().is_market_open(
+            self.__state.asset_type,
+            datetime.datetime.now(tz=pytz.timezone("America/New_York")),
+        )
+
+        # Skip if market is not open
+        if not is_market_open:
+            return True
+
+        # Skip if not trading
+        if self.__state.status != PythPriceStatus.TRADING:
+            return True
+
+        distance = abs(
+            self.__state.slot_aggregate_attempted - self.__state.slot_aggregate
+        )
+
+        # Pass if distance is less than max slot distance
+        if distance < self.__max_slot_distance:
+            return True
+
+        # Fail
+        return False
+
+    def error_message(self) -> str:
+        return dedent(
+            f"""
+            {self.__state.symbol} is offline.
+
+            Valid aggregate slot: {self.__state.slot_aggregate}
+            Attempted aggregate slot: {self.__state.slot_aggregate_attempted}
+            """
+        ).strip()
 
 
 class PriceFeedCoinGeckoCheck(PriceFeedCheck):
@@ -216,51 +260,9 @@ class PriceFeedCrossChainDeviationCheck(PriceFeedCheck):
         ).strip()
 
 
-class PriceFeedOnlineCheck(PriceFeedCheck):
-    def __init__(self, state: PriceFeedState, config: PriceFeedCheckConfig):
-        self.__state = state
-        self.__max_slot_distance: int = int(config["max_slot_distance"])
-
-    def state(self) -> PriceFeedState:
-        return self.__state
-
-    def run(self) -> bool:
-        is_market_open = HolidayCalendar().is_market_open(
-            self.__state.asset_type,
-            datetime.datetime.now(tz=pytz.timezone("America/New_York")),
-        )
-
-        # Skip if market is not open
-        if not is_market_open:
-            return True
-
-        # Skip if not trading
-        if self.__state.status != PythPriceStatus.TRADING:
-            return True
-
-        distance = abs(self.__state.slot - self.__state.slot_aggregate)
-
-        # Pass if distance is less than max slot distance
-        if distance < self.__max_slot_distance:
-            return True
-
-        # Fail
-        return False
-
-    def error_message(self) -> str:
-        return dedent(
-            f"""
-            {self.__state.symbol} is offline.
-
-            Slot: {self.__state.slot}
-            Aggregate price slot: {self.__state.slot_aggregate}
-            """
-        ).strip()
-
-
 PRICE_FEED_CHECKS = [
     PriceFeedCoinGeckoCheck,
     PriceFeedCrossChainDeviationCheck,
     PriceFeedCrossChainOnlineCheck,
-    PriceFeedOnlineCheck,
+    PriceFeedAggregateCheck,
 ]

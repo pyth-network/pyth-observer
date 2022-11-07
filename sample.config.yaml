@@ -12,6 +12,9 @@ events:
 checks:
   global:
     # Price feed checks
+    PriceFeedAggregateCheck:
+      enable: true
+      max_slot_distance: 25
     PriceFeedCoinGeckoCheck:
       enable: true
       max_deviation: 5
@@ -23,9 +26,6 @@ checks:
       enable: true
       max_deviation: 5
       max_staleness: 60
-    PriceFeedOnlineCheck:
-      enable: true
-      max_slot_distance: 25
     # Publisher checks
     PublisherAggregateCheck:
       enable: false

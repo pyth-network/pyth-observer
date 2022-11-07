@@ -100,7 +100,7 @@ class Observer:
                             asset_type=product.attrs["asset_type"],
                             public_key=price_account.key,
                             status=price_account.aggregate_price_status,
-                            slot=price_account.valid_slot,
+                            slot_aggregate_attempted=price_account.valid_slot,
                             slot_aggregate=price_account.aggregate_price_info.pub_slot,
                             price_aggregate=price_account.aggregate_price_info.price,
                             confidence_interval_aggregate=price_account.aggregate_price_info.confidence_interval,
