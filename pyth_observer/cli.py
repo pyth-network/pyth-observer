@@ -5,6 +5,7 @@ import sys
 import click
 import yaml
 from loguru import logger
+from prometheus_client import start_http_server
 
 from pyth_observer import Observer
 
@@ -28,12 +29,20 @@ from pyth_observer import Observer
     envvar="COINGECKO_MAPPING",
     required=True,
 )
-def run(config, publishers, coingecko_mapping):
+@click.option(
+    "--prometheus-port",
+    help="Port number for Prometheus metrics endpoint",
+    envvar="PROMETHEUS_PORT",
+    default="9001",
+)
+def run(config, publishers, coingecko_mapping, prometheus_port):
     config_ = yaml.safe_load(open(config, "r"))
     publishers_ = yaml.safe_load(open(publishers, "r"))
     publishers_inverted = {v: k for k, v in publishers_.items()}
     coingecko_mapping_ = yaml.safe_load(open(coingecko_mapping, "r"))
     observer = Observer(config_, publishers_inverted, coingecko_mapping_)
+
+    start_http_server(int(prometheus_port))
 
     asyncio.run(observer.run())
 

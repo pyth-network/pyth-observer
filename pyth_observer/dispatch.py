@@ -1,6 +1,8 @@
 import asyncio
 from typing import Any, Awaitable, Dict, List
 
+from prometheus_client import Gauge
+
 from pyth_observer.check import Check, State
 from pyth_observer.check.price_feed import PRICE_FEED_CHECKS, PriceFeedState
 from pyth_observer.check.publisher import PUBLISHER_CHECKS, PublisherState
@@ -21,6 +23,16 @@ class Dispatch:
     def __init__(self, config, publishers):
         self.config = config
         self.publishers = publishers
+        self.price_feed_check_gauge = Gauge(
+            "price_feed_check_failed",
+            "Price feed check failure status",
+            ["check", "symbol"],
+        )
+        self.publisher_check_gauge = Gauge(
+            "publisher_check_failed",
+            "Publisher check failure status",
+            ["check", "symbol", "publisher"],
+        )
 
     async def run(self, states: List[State]):
         # First, run each check and store the ones that failed
@@ -55,21 +67,38 @@ class Dispatch:
         for check_class in PRICE_FEED_CHECKS:
             config = self.load_config(check_class.__name__, state.symbol)
             check = check_class(state, config)
+            gauge = self.price_feed_check_gauge.labels(
+                check=check_class.__name__,
+                symbol=state.symbol,
+            )
 
-            if config["enable"] and not check.run():
-                failed_checks.append(check)
+            if config["enable"]:
+                if check.run():
+                    gauge.set(0)
+                else:
+                    failed_checks.append(check)
+                    gauge.set(1)
 
         return failed_checks
 
-    def check_publisher(self, state) -> List[Check]:
+    def check_publisher(self, state: PublisherState) -> List[Check]:
         failed_checks: List[Check] = []
 
         for check_class in PUBLISHER_CHECKS:
             config = self.load_config(check_class.__name__, state.symbol)
             check = check_class(state, config)
+            gauge = self.publisher_check_gauge.labels(
+                check=check_class.__name__,
+                symbol=state.symbol,
+                publisher=self.publishers.get(state.public_key, state.public_key),
+            )
 
-            if config["enable"] and not check.run():
-                failed_checks.append(check)
+            if config["enable"]:
+                if check.run():
+                    gauge.set(0)
+                else:
+                    gauge.set(1)
+                    failed_checks.append(check)
 
         return failed_checks
 
