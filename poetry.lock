@@ -587,7 +587,7 @@ testing = ["pytest", "pytest-benchmark"]
 
 [[package]]
 name = "prometheus-client"
-version = "0.14.1"
+version = "0.15.0"
 description = "Python client for the Prometheus monitoring system."
 category = "main"
 optional = false
@@ -996,7 +996,7 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.10"
-content-hash = "8a33e587c1043562694f32f17e906f1a9c7e9e023a4fde479ae11745ba2932af"
+content-hash = "7307318ae1b905ee9fe53069b5fc595ca3a259c832052cf872f459585daaecff"
 
 [metadata.files]
 aiodns = [
@@ -1525,8 +1525,8 @@ pluggy = [
     {file = "pluggy-1.0.0.tar.gz", hash = "sha256:4224373bacce55f955a878bf9cfa763c1e360858e330072059e10bad68531159"},
 ]
 prometheus-client = [
-    {file = "prometheus_client-0.14.1-py3-none-any.whl", hash = "sha256:522fded625282822a89e2773452f42df14b5a8e84a86433e3f8a189c1d54dc01"},
-    {file = "prometheus_client-0.14.1.tar.gz", hash = "sha256:5459c427624961076277fdc6dc50540e2bacb98eebde99886e59ec55ed92093a"},
+    {file = "prometheus_client-0.15.0-py3-none-any.whl", hash = "sha256:db7c05cbd13a0f79975592d112320f2605a325969b270a94b71dcabc47b931d2"},
+    {file = "prometheus_client-0.15.0.tar.gz", hash = "sha256:be26aa452490cfcf6da953f9436e95a9f2b4d578ca80094b4458930e5f584ab1"},
 ]
 prompt-toolkit = [
     {file = "prompt_toolkit-3.0.31-py3-none-any.whl", hash = "sha256:9696f386133df0fc8ca5af4895afe5d78f5fcfe5258111c2a79a1c3e41ffa96d"},
