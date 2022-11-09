@@ -50,6 +50,7 @@ class DatadogEvent(Event):
             title=text.split("\n")[0],
             text=text,
             tags=[
+                "service:observer",
                 f"network:{self.context['network']}",
                 f"symbol:{self.check.state().symbol}",
                 f"check:{self.check.__class__.__name__}",
