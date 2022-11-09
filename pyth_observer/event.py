@@ -1,4 +1,5 @@
-from typing import Dict, Protocol, TypedDict, cast
+import os
+from typing import Dict, Literal, Protocol, TypedDict, cast
 
 from datadog_api_client.api_client import AsyncApiClient as DatadogAPI
 from datadog_api_client.configuration import Configuration as DatadogConfig
@@ -60,7 +61,12 @@ class DatadogEvent(Event):
         # This assumes that DD_API_KEY and DD_SITE env. variables are set. Also,
         # using the async API makes the events api return a coroutine, so we
         # ignore the pyright warning.
-        async with DatadogAPI(DatadogConfig()) as api:
+
+        server_variables = {"site": os.environ["DATADOG_EVENT_SITE"]}
+        api_key = {"apiKeyAuth": os.environ["DATADOG_EVENT_API_KEY"]}
+        config = DatadogConfig(api_key=api_key, server_variables=server_variables)
+
+        async with DatadogAPI(config) as api:
             response = await DatadogEventAPI(api).create_event(
                 body=event
             )  # pyright: ignore
@@ -69,6 +75,9 @@ class DatadogEvent(Event):
                 raise RuntimeError(
                     f"Failed to send Datadog event (status: {response.status})"
                 )
+
+
+LogEventLevel = Literal["DEBUG", "INFO", "WARNING", "ERROR"]
 
 
 class LogEvent(Event):
@@ -88,4 +97,6 @@ class LogEvent(Event):
         else:
             raise RuntimeError("Invalid check")
 
-        logger.warning(text.split("\n")[0])
+        level = cast(LogEventLevel, os.environ.get("LOG_EVENT_LEVEL", "INFO"))
+
+        logger.log(level, text.split("\n")[0])
