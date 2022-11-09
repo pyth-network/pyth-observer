@@ -17,7 +17,7 @@ from throttler import Throttler
 
 from pyth_observer.check.price_feed import PriceFeedState
 from pyth_observer.check.publisher import PublisherState
-from pyth_observer.coingecko import get_coingecko_prices
+from pyth_observer.coingecko import Symbol, get_coingecko_prices
 from pyth_observer.crosschain import CrosschainPrice
 from pyth_observer.crosschain import CrosschainPriceObserver as Crosschain
 from pyth_observer.dispatch import Dispatch
@@ -45,7 +45,12 @@ def get_solana_urls(network) -> Tuple[str, str]:
 
 
 class Observer:
-    def __init__(self, config: Any, publishers: Any, coingecko_mapping: Any):
+    def __init__(
+        self,
+        config: Dict[str, Any],
+        publishers: Dict[str, str],
+        coingecko_mapping: Dict[str, Symbol],
+    ):
         self.config = config
         self.dispatch = Dispatch(config, publishers)
         self.publishers = publishers
