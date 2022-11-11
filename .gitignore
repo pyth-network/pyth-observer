@@ -1,9 +1,7 @@
-.env
-ve
-venv
-pyth-client-py
-publishers.json
-**/__pycache__
+__pycache__/
+*.py[cod]
+*$py.class
 
 .DS_Store
+.envrc
 .coverage

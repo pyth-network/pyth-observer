@@ -1,0 +1,52 @@
+network:
+  name: "pythnet"
+  http_endpoint: "https://pythnet.rpcpool.com"
+  ws_endpoint: "wss://pythnet.rpcpool.com"
+  first_mapping: "AHtgzX45WTKfkPG53L6WYhGEXwQkN1BVknET3sVsLL8J"
+  crosschain_endpoint: "https://xc-mainnet.pyth.network"
+  request_rate_limit: 10
+  request_rate_period: 1
+events:
+  - DatadogEvent
+  - LogEvent
+checks:
+  global:
+    # Price feed checks
+    PriceFeedAggregateCheck:
+      enable: true
+      max_slot_distance: 25
+    PriceFeedCoinGeckoCheck:
+      enable: true
+      max_deviation: 5
+      max_staleness: 60
+    PriceFeedCrossChainOnlineCheck:
+      enable: true
+      max_staleness: 60
+    PriceFeedCrossChainDeviationCheck:
+      enable: true
+      max_deviation: 5
+      max_staleness: 60
+    # Publisher checks
+    PublisherAggregateCheck:
+      enable: false
+      max_interval_distance: 20
+    PublisherConfidenceIntervalCheck:
+      enable: false
+      min_confidence_interval: 0
+    PublisherOfflineCheck:
+      enable: false
+      max_slot_distance: 25
+    PublisherPriceCheck:
+      enable: false
+      max_slot_distance: 25
+      max_aggregate_distance: 6
+  # Per-symbol config
+  Crypto.MEAN/USD:
+    PriceFeedCrossChainOnlineCheck:
+      enable: true
+  FX.USD/CNH:
+    PriceFeedCrossChainOnlineCheck:
+      enable: true
+  FX.USD/ZAR:
+    PriceFeedCrossChainOnlineCheck:
+      enable: true
