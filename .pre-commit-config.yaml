@@ -3,11 +3,11 @@ repos:
     hooks:
       - id: isort
         name: isort
-        entry: poetry run isort --profile=black --check .
+        entry: poetry run isort --profile=black .
         language: system
       - id: black
         name: black
-        entry: poetry run black --check .
+        entry: poetry run black .
         pass_filenames: false
         language: system
       - id: pyright

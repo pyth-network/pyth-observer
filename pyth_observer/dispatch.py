@@ -1,4 +1,5 @@
 import asyncio
+from copy import deepcopy
 from typing import Any, Awaitable, Dict, List
 
 from prometheus_client import Gauge
@@ -103,7 +104,7 @@ class Dispatch:
         return failed_checks
 
     def load_config(self, check_name: str, symbol: str) -> Dict[str, Any]:
-        config = self.config["checks"]["global"][check_name]
+        config = deepcopy(self.config["checks"]["global"][check_name])
 
         if symbol in self.config["checks"]:
             if check_name in self.config["checks"][symbol]:
