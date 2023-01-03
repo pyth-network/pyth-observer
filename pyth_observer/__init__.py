@@ -1,9 +1,10 @@
 import asyncio
 import os
-from typing import Any, Dict, Tuple
+from typing import Any, Dict, List, Tuple
 
 from base58 import b58decode
 from loguru import logger
+from pythclient.pythaccounts import PythPriceAccount, PythPriceType, PythProductAccount
 from pythclient.pythclient import PythClient
 from pythclient.solana import (
     SOLANA_DEVNET_HTTP_ENDPOINT,
@@ -137,17 +138,19 @@ class Observer:
             logger.debug("Sleeping...")
             await asyncio.sleep(5)
 
-    async def get_pyth_products(self):
+    async def get_pyth_products(self) -> List[PythProductAccount]:
         logger.debug("Fetching Pyth product accounts...")
 
         async with self.pyth_throttler:
-            return await self.pyth_client.get_products()
+            return await self.pyth_client.refresh_products()
 
-    async def get_pyth_prices(self, product):
+    async def get_pyth_prices(
+        self, product: PythProductAccount
+    ) -> Dict[PythPriceType, PythPriceAccount]:
         logger.debug("Fetching Pyth price accounts...")
 
         async with self.pyth_throttler:
-            return await product.get_prices()
+            return await product.refresh_prices()
 
     async def get_coingecko_prices(self):
         logger.debug("Fetching CoinGecko prices...")

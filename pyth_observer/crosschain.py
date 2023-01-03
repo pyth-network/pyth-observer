@@ -38,11 +38,11 @@ class CrosschainPriceObserver:
             price_feeds = []
 
             for ids in chunked(price_feed_ids, 25):
-                # FIXME: Properly build this URL
-                query_params = "ids[]=" + "&ids[]=".join(ids)
-                price_feeds_url = f"{self.url}/api/latest_price_feeds?{query_params}"
+                price_feeds_url = f"{self.url}/api/latest_price_feeds"
 
-                async with session.get(price_feeds_url) as response:
+                async with session.get(
+                    price_feeds_url, params={"ids": ids}
+                ) as response:
                     price_feeds += await response.json()
 
         # Return a dictionary of id -> {price, conf, expo} for fast lookup
