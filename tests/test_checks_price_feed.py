@@ -19,5 +19,9 @@ def test_price_feed_aggregate_check():
         crosschain_price={"price": 1003.0, "conf": 10.0, "publish_time": 123},
     )
 
-    assert PriceFeedOfflineCheck(state, {"max_slot_distance": 10}).run()
-    assert not PriceFeedOfflineCheck(state, {"max_slot_distance": 2}).run()
+    assert PriceFeedOfflineCheck(
+        state, {"max_slot_distance": 10, "abandoned_slot_distance": 100}
+    ).run()
+    assert not PriceFeedOfflineCheck(
+        state, {"max_slot_distance": 2, "abandoned_slot_distance": 100}
+    ).run()
