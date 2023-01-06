@@ -5,6 +5,8 @@ from typing import Dict, Protocol, runtime_checkable
 from pythclient.pythaccounts import PythPriceStatus
 from pythclient.solana import SolanaPublicKey
 
+PUBLISHER_EXCLUSION_DISTANCE = 25
+
 
 @dataclass
 class PublisherState:
@@ -63,7 +65,7 @@ class PublisherWithinAggregateConfidenceCheck(PublisherCheck):
 
         # Pass if publisher slot is far from aggregate slot
         distance = abs(self.__state.slot - self.__state.aggregate_slot)
-        if distance > 25:
+        if distance > PUBLISHER_EXCLUSION_DISTANCE:
             return True
 
         diff = self.__state.price - self.__state.price_aggregate
@@ -107,7 +109,7 @@ class PublisherConfidenceIntervalCheck(PublisherCheck):
 
         # Pass if publisher slot is far from aggregate slot
         distance = abs(self.__state.slot - self.__state.aggregate_slot)
-        if distance > 25:
+        if distance > PUBLISHER_EXCLUSION_DISTANCE:
             return True
 
         # Pass if confidence interval is greater than min_confidence_interval
