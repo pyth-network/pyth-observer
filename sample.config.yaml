@@ -12,9 +12,10 @@ events:
 checks:
   global:
     # Price feed checks
-    PriceFeedAggregateCheck:
+    PriceFeedOfflineCheck:
       enable: true
       max_slot_distance: 25
+      abandoned_slot_distance: 100000
     PriceFeedCoinGeckoCheck:
       enable: true
       max_deviation: 5
@@ -27,7 +28,7 @@ checks:
       max_deviation: 5
       max_staleness: 60
     # Publisher checks
-    PublisherAggregateCheck:
+    PublisherWithinAggregateConfidenceCheck:
       enable: false
       max_interval_distance: 20
     PublisherConfidenceIntervalCheck:
@@ -36,17 +37,15 @@ checks:
     PublisherOfflineCheck:
       enable: false
       max_slot_distance: 25
+      abandoned_slot_distance: 10000
     PublisherPriceCheck:
-      enable: false
+      enable: true
       max_slot_distance: 25
       max_aggregate_distance: 6
   # Per-symbol config
-  Crypto.MEAN/USD:
-    PriceFeedCrossChainOnlineCheck:
-      enable: true
-  FX.USD/CNH:
-    PriceFeedCrossChainOnlineCheck:
-      enable: true
-  FX.USD/ZAR:
-    PriceFeedCrossChainOnlineCheck:
-      enable: true
+  Crypto.MNGO/USD:
+    PriceFeedOfflineCheck:
+      max_slot_distance: 10000
+  FX.USD/HKD:
+    PriceFeedOfflineCheck:
+      max_slot_distance: 10000

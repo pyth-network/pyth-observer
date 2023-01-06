@@ -11,8 +11,6 @@ from datadog_api_client.v1.model.event_create_request import (
 from loguru import logger
 
 from pyth_observer.check import Check
-from pyth_observer.check.price_feed import PriceFeedCheck
-from pyth_observer.check.publisher import PublisherCheck
 
 
 class Context(TypedDict):
@@ -36,15 +34,7 @@ class DatadogEvent(Event):
     async def send(self):
         # Publisher checks expect the key -> name mapping of publishers when
         # generating the error title/message.
-        if self.check.__class__.__bases__ == (PublisherCheck,):
-            text = cast(PublisherCheck, self.check).error_message(
-                self.context["publishers"]
-            )
-        elif self.check.__class__.__bases__ == (PriceFeedCheck,):
-            text = cast(PriceFeedCheck, self.check).error_message()
-        else:
-            raise RuntimeError("Invalid check")
-
+        text = self.check.error_message()
         event = DatadogAPIEvent(
             aggregation_key=f"{self.check.__class__.__name__}-{self.check.state().symbol}",
             title=text.split("\n")[0],
@@ -89,15 +79,7 @@ class LogEvent(Event):
     async def send(self):
         # Publisher checks expect the key -> name mapping of publishers when
         # generating the error title/message.
-        if self.check.__class__.__bases__ == (PublisherCheck,):
-            text = cast(PublisherCheck, self.check).error_message(
-                self.context["publishers"]
-            )
-        elif self.check.__class__.__bases__ == (PriceFeedCheck,):
-            text = cast(PriceFeedCheck, self.check).error_message()
-        else:
-            raise RuntimeError("Invalid check")
+        text = self.check.error_message()
 
         level = cast(LogEventLevel, os.environ.get("LOG_EVENT_LEVEL", "INFO"))
-
-        logger.log(level, text.split("\n")[0])
+        logger.log(level, text.replace("\n", ". "))

@@ -9,18 +9,24 @@ EQUITY_CLOSE = datetime.time(16, 0, 0, tzinfo=TZ)
 EQUITY_EARLY_CLOSE = datetime.time(13, 0, 0, tzinfo=TZ)
 
 # EQUITY_HOLIDAYS and EQUITY_EARLY_HOLIDAYS will need to be updated each year
+# From https://www.nyse.com/markets/hours-calendars
 EQUITY_HOLIDAYS = [
-    datetime.datetime(2022, 1, 17, tzinfo=TZ).date(),
-    datetime.datetime(2022, 2, 21, tzinfo=TZ).date(),
-    datetime.datetime(2022, 4, 15, tzinfo=TZ).date(),
-    datetime.datetime(2022, 5, 30, tzinfo=TZ).date(),
-    datetime.datetime(2022, 6, 20, tzinfo=TZ).date(),
-    datetime.datetime(2022, 7, 4, tzinfo=TZ).date(),
-    datetime.datetime(2022, 9, 5, tzinfo=TZ).date(),
-    datetime.datetime(2022, 11, 24, tzinfo=TZ).date(),
-    datetime.datetime(2022, 12, 26, tzinfo=TZ).date(),
+    datetime.datetime(2023, 1, 2, tzinfo=TZ).date(),
+    datetime.datetime(2023, 1, 16, tzinfo=TZ).date(),
+    datetime.datetime(2023, 2, 20, tzinfo=TZ).date(),
+    datetime.datetime(2023, 4, 7, tzinfo=TZ).date(),
+    datetime.datetime(2023, 5, 29, tzinfo=TZ).date(),
+    datetime.datetime(2023, 6, 19, tzinfo=TZ).date(),
+    datetime.datetime(2023, 7, 4, tzinfo=TZ).date(),
+    datetime.datetime(2022, 9, 4, tzinfo=TZ).date(),
+    datetime.datetime(2023, 11, 23, tzinfo=TZ).date(),
+    datetime.datetime(2023, 12, 25, tzinfo=TZ).date(),
 ]
-EQUITY_EARLY_HOLIDAYS = [datetime.datetime(2022, 11, 25, tzinfo=TZ).date()]
+
+EQUITY_EARLY_HOLIDAYS = [
+    datetime.datetime(2023, 7, 3, tzinfo=TZ).date(),
+    datetime.datetime(2023, 11, 24, tzinfo=TZ).date(),
+]
 
 
 class HolidayCalendar:
