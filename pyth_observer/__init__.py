@@ -140,6 +140,7 @@ class Observer:
                                 price_aggregate=price_account.aggregate_price_info.price,
                                 slot=component.latest_price_info.pub_slot,
                                 aggregate_slot=price_account.last_slot,
+                                # this is the solana block slot when price account was fetched
                                 latest_block_slot=price_account.slot,
                                 status=component.latest_price_info.price_status,
                                 aggregate_status=price_account.aggregate_price_status,
