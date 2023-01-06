@@ -100,14 +100,20 @@ class Observer:
                     if not price_account.aggregate_price_info:
                         raise RuntimeError("Aggregate price info is missing")
 
+                    # When min_publishers is high it means that the price is not production-ready
+                    # yet and it is still being tested. We need no alerting for these prices.
+                    if price_account.min_publishers >= 10:
+                        continue
+
                     states.append(
                         PriceFeedState(
                             symbol=product.attrs["symbol"],
                             asset_type=product.attrs["asset_type"],
                             public_key=price_account.key,
                             status=price_account.aggregate_price_status,
-                            slot_aggregate_attempted=price_account.valid_slot,
-                            slot_aggregate=price_account.aggregate_price_info.pub_slot,
+                            # this is the solana block slot when price account was fetched
+                            latest_block_slot=price_account.slot,
+                            latest_trading_slot=price_account.last_slot,
                             price_aggregate=price_account.aggregate_price_info.price,
                             confidence_interval_aggregate=price_account.aggregate_price_info.confidence_interval,
                             coingecko_price=coingecko_prices.get(product.attrs["base"]),
@@ -119,8 +125,13 @@ class Observer:
                     )
 
                     for component in price_account.price_components:
+                        publisher_name = (
+                            self.publishers.get(component.publisher_key.key, "")
+                            + f" ({component.publisher_key.key})"
+                        ).strip()
                         states.append(
                             PublisherState(
+                                publisher_name=publisher_name,
                                 symbol=product.attrs["symbol"],
                                 public_key=component.publisher_key,
                                 confidence_interval=component.latest_price_info.confidence_interval,
@@ -128,8 +139,10 @@ class Observer:
                                 price=component.latest_price_info.price,
                                 price_aggregate=price_account.aggregate_price_info.price,
                                 slot=component.latest_price_info.pub_slot,
-                                slot_aggregate=component.last_aggregate_price_info.pub_slot,
+                                aggregate_slot=price_account.last_slot,
+                                latest_block_slot=price_account.slot,
                                 status=component.latest_price_info.price_status,
+                                aggregate_status=price_account.aggregate_price_status,
                             )
                         )
 

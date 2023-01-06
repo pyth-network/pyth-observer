@@ -19,8 +19,8 @@ class PriceFeedState:
     asset_type: str
     public_key: SolanaPublicKey
     status: PythPriceStatus
-    slot_aggregate_attempted: int
-    slot_aggregate: int
+    latest_block_slot: int
+    latest_trading_slot: int
     price_aggregate: float
     confidence_interval_aggregate: float
     coingecko_price: Optional[float]
@@ -46,10 +46,11 @@ class PriceFeedCheck(Protocol):
         ...
 
 
-class PriceFeedAggregateCheck(PriceFeedCheck):
+class PriceFeedOfflineCheck(PriceFeedCheck):
     def __init__(self, state: PriceFeedState, config: PriceFeedCheckConfig):
         self.__state = state
         self.__max_slot_distance: int = int(config["max_slot_distance"])
+        self.__abandoned_slot_distance: int = int(config["abandoned_slot_distance"])
 
     def state(self) -> PriceFeedState:
         return self.__state
@@ -64,28 +65,30 @@ class PriceFeedAggregateCheck(PriceFeedCheck):
         if not is_market_open:
             return True
 
-        # Skip if not trading
-        if self.__state.status != PythPriceStatus.TRADING:
-            return True
-
         distance = abs(
-            self.__state.slot_aggregate_attempted - self.__state.slot_aggregate
+            self.__state.latest_block_slot - self.__state.latest_trading_slot
         )
 
         # Pass if distance is less than max slot distance
         if distance < self.__max_slot_distance:
             return True
 
+        # Pass if price has been stale for a long time
+        if distance > self.__abandoned_slot_distance:
+            return True
+
         # Fail
         return False
 
     def error_message(self) -> str:
+        distance = self.__state.latest_block_slot - self.__state.latest_trading_slot
         return dedent(
             f"""
-            {self.__state.symbol} is offline.
+            {self.__state.symbol} is offline (either non-trading/stale).
+            It is not updated for {distance} slots.
 
-            Valid aggregate slot: {self.__state.slot_aggregate}
-            Attempted aggregate slot: {self.__state.slot_aggregate_attempted}
+            Latest trading slot: {self.__state.latest_trading_slot}
+            Block slot: {self.__state.latest_block_slot}
             """
         ).strip()
 
@@ -174,6 +177,10 @@ class PriceFeedCrossChainOnlineCheck(PriceFeedCheck):
         return self.__state
 
     def run(self) -> bool:
+        # Skip if not trading
+        if self.__state.status != PythPriceStatus.TRADING:
+            return True
+
         # Skip if publish time is zero
         if not self.__state.crosschain_price["publish_time"]:
             return True
@@ -264,5 +271,5 @@ PRICE_FEED_CHECKS = [
     PriceFeedCoinGeckoCheck,
     PriceFeedCrossChainDeviationCheck,
     PriceFeedCrossChainOnlineCheck,
-    PriceFeedAggregateCheck,
+    PriceFeedOfflineCheck,
 ]
