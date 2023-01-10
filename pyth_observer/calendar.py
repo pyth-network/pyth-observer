@@ -28,6 +28,9 @@ EQUITY_EARLY_HOLIDAYS = [
     datetime.datetime(2023, 11, 24, tzinfo=TZ).date(),
 ]
 
+FX_METAL_CLOSE_TIME = datetime.time(17, 0, 0, tzinfo=TZ)
+FX_METAL_OPEN_TIME = datetime.time(12, 0, 0, tzinfo=TZ)
+
 
 class HolidayCalendar:
     def is_market_open(self, asset_type: str, dt: datetime.datetime):
@@ -48,16 +51,15 @@ class HolidayCalendar:
 
         if asset_type in ["FX", "Metal"]:
             # The market for FX and Metal is closed from Friday 5pm to Sunday 5pm
-            close_or_open_time = datetime.time(17, 0, 0, tzinfo=TZ)
 
             # Friday the market is close after 5pm
-            if day == 4 and time > close_or_open_time:
+            if day == 4 and time > FX_METAL_CLOSE_TIME:
                 return False
             # Saturday the market is closed all the time
             if day == 5:
                 return False
             # Sunday the market is closed before 5pm
-            if day == 6 and time < close_or_open_time:
+            if day == 6 and time < FX_METAL_OPEN_TIME:
                 return False
 
             return True
