@@ -59,7 +59,7 @@ class HolidayCalendar:
             # Sunday the market is closed before 5pm
             if day == 6 and time < close_or_open_time:
                 return False
-            
+
             return True
 
         # all other markets (crypto)
