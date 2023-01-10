@@ -213,8 +213,8 @@ class PublisherPriceCheck(PublisherCheck):
             {self.__state.publisher_name} price is too far from aggregate price.
 
             Symbol: {self.__state.symbol}
-            Publisher price: {self.__state.price}
-            Aggregate price: {self.__state.price_aggregate}
+            Publisher price: {self.__state.price} ± {self.__state.confidence_interval}
+            Aggregate price: {self.__state.price_aggregate} ± {self.__state.confidence_interval_aggregate}
             Deviation: {deviation}%
             """
         ).strip()
