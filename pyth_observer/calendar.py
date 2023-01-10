@@ -30,10 +30,10 @@ EQUITY_EARLY_HOLIDAYS = [
 
 
 class HolidayCalendar:
-    def is_market_open(self, asset_type, dt):
-        # equity market
+    def is_market_open(self, asset_type: str, dt: datetime.datetime):
+        day, date, time = dt.weekday(), dt.date(), dt.time()
+
         if asset_type == "Equity":
-            day, date, time = dt.weekday(), dt.date(), dt.time()
             if date in EQUITY_HOLIDAYS or date in EQUITY_EARLY_HOLIDAYS:
                 if (
                     date in EQUITY_EARLY_HOLIDAYS
@@ -45,5 +45,22 @@ class HolidayCalendar:
             if day < 5 and time >= EQUITY_OPEN and time <= EQUITY_CLOSE:
                 return True
             return False
-        # all other markets (crypto, fx, metal)
+
+        if asset_type in ["FX", "Metal"]:
+            # The market for FX and Metal is closed from Friday 5pm to Sunday 5pm
+            close_or_open_time = datetime.time(17, 0, 0, tzinfo=TZ)
+
+            # Friday the market is close after 5pm
+            if day == 4 and time > close_or_open_time:
+                return False
+            # Saturday the market is closed all the time
+            if day == 5:
+                return False
+            # Sunday the market is closed before 5pm
+            if day == 6 and time < close_or_open_time:
+                return False
+            
+            return True
+
+        # all other markets (crypto)
         return True
