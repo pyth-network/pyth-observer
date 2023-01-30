@@ -135,7 +135,7 @@ class Observer:
                                 symbol=product.attrs["symbol"],
                                 public_key=component.publisher_key,
                                 confidence_interval=component.latest_price_info.confidence_interval,
-                                confidence_interval_aggregate=component.last_aggregate_price_info.confidence_interval,
+                                confidence_interval_aggregate=price_account.aggregate_price_info.confidence_interval,
                                 price=component.latest_price_info.price,
                                 price_aggregate=price_account.aggregate_price_info.price,
                                 slot=component.latest_price_info.pub_slot,
