@@ -37,8 +37,12 @@ class DatadogEvent(Event):
         # generating the error title/message.
         text = self.check.error_message()
 
+        # An example is: PriceFeedOfflineCheck-Crypto.AAVE/USD
         aggregation_key = f"{self.check.__class__.__name__}-{self.check.state().symbol}"
+
         if self.check.__class__.__bases__ == (PublisherCheck,):
+            # Add publisher key to the aggregation key to separate different faulty publishers
+            # An example would be: PublisherPriceCheck-Crypto.AAVE/USD-9TvAYCUkGajRXs....
             aggregation_key += "-" + self.check.state().public_key
 
         event = DatadogAPIEvent(
