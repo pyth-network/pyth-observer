@@ -25,7 +25,7 @@ class PriceFeedState:
     confidence_interval_aggregate: float
     coingecko_price: Optional[float]
     coingecko_update: Optional[int]
-    crosschain_price: CrosschainPrice
+    crosschain_price: Optional[CrosschainPrice]
 
 
 PriceFeedCheckConfig = Dict[str, str | float | int | bool]
@@ -181,10 +181,6 @@ class PriceFeedCrossChainOnlineCheck(PriceFeedCheck):
         if self.__state.status != PythPriceStatus.TRADING:
             return True
 
-        # Skip if publish time is zero
-        if not self.__state.crosschain_price["publish_time"]:
-            return True
-
         is_market_open = HolidayCalendar().is_market_open(
             self.__state.asset_type,
             datetime.datetime.now(tz=pytz.timezone("America/New_York")),
@@ -192,6 +188,14 @@ class PriceFeedCrossChainOnlineCheck(PriceFeedCheck):
 
         # Skip if not trading hours (for equities)
         if not is_market_open:
+            return True
+
+        # Price should exist, it fails otherwise
+        if not self.__state.crosschain_price:
+            return False
+
+        # Skip if publish time is zero
+        if not self.__state.crosschain_price["publish_time"]:
             return True
 
         staleness = int(time.time()) - self.__state.crosschain_price["publish_time"]
@@ -204,7 +208,10 @@ class PriceFeedCrossChainOnlineCheck(PriceFeedCheck):
         return False
 
     def error_message(self) -> str:
-        publish_time = arrow.get(self.__state.crosschain_price["publish_time"])
+        if self.__state.crosschain_price:
+            publish_time = arrow.get(self.__state.crosschain_price["publish_time"])
+        else:
+            publish_time = arrow.get(0)
 
         return dedent(
             f"""
@@ -225,6 +232,10 @@ class PriceFeedCrossChainDeviationCheck(PriceFeedCheck):
         return self.__state
 
     def run(self) -> bool:
+        # Skip if does not exist
+        if not self.__state.crosschain_price:
+            return True
+
         # Skip if not trading
         if self.__state.status != PythPriceStatus.TRADING:
             return True
@@ -257,12 +268,18 @@ class PriceFeedCrossChainDeviationCheck(PriceFeedCheck):
         return False
 
     def error_message(self) -> str:
+        # It can never happen because of the check logic but linter could not understand it.
+        price = (
+            self.__state.crosschain_price["price"]
+            if self.__state.crosschain_price
+            else None
+        )
         return dedent(
             f"""
             {self.__state.symbol} is too far at the price service.
 
             Price: {self.__state.price_aggregate}
-            Price at price service: {self.__state.crosschain_price['price']}
+            Price at price service: {price}
             """
         ).strip()
 

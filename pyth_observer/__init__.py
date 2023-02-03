@@ -89,9 +89,9 @@ class Observer:
                 # for each publisher).
                 states = []
                 price_accounts = await self.get_pyth_prices(product)
-                crosschain_price = crosschain_prices[
-                    b58decode(product.first_price_account_key.key).hex()
-                ]
+                crosschain_price = crosschain_prices.get(
+                    b58decode(product.first_price_account_key.key).hex(), None
+                )
 
                 for _, price_account in price_accounts.items():
                     if not price_account.aggregate_price_status:
