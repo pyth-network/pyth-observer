@@ -194,7 +194,6 @@ class PublisherPriceCheck(PublisherCheck):
         if self.__state.price == 0:
             return True
 
-
         deviation = (self.ci_adjusted_price_diff() / self.__state.price_aggregate) * 100
 
         # Pass if deviation is less than max distance
