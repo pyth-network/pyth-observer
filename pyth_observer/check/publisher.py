@@ -194,8 +194,7 @@ class PublisherPriceCheck(PublisherCheck):
         if self.__state.price == 0:
             return True
 
-        price_diff = abs(self.__state.price - self.__state.price_aggregate)
-        deviation = (price_diff / self.__state.price_aggregate) * 100
+        deviation = (self.ci_adjusted_price_diff() / self.__state.price_aggregate) * 100
 
         # Pass if deviation is less than max distance
         if deviation <= self.__max_aggregate_distance:
@@ -205,8 +204,7 @@ class PublisherPriceCheck(PublisherCheck):
         return False
 
     def error_message(self) -> str:
-        price_diff = abs(self.__state.price - self.__state.price_aggregate)
-        deviation = (price_diff / self.__state.price_aggregate) * 100
+        deviation = (self.ci_adjusted_price_diff() / self.__state.price_aggregate) * 100
 
         return dedent(
             f"""
@@ -218,6 +216,12 @@ class PublisherPriceCheck(PublisherCheck):
             Deviation: {deviation}%
             """
         ).strip()
+
+    # Returns the distance between the aggregate price and the closest side of the publisher's confidence interval
+    # Returns 0 if the aggregate price is within the publisher's confidence interval.
+    def ci_adjusted_price_diff(self) -> float:
+        price_only_diff = abs(self.__state.price - self.__state.price_aggregate)
+        return max(price_only_diff - self.__state.confidence_interval, 0)
 
 
 PUBLISHER_CHECKS = [

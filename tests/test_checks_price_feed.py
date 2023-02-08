@@ -4,7 +4,7 @@ from pythclient.solana import SolanaPublicKey
 from pyth_observer.check.price_feed import PriceFeedOfflineCheck, PriceFeedState
 
 
-def test_price_feed_aggregate_check():
+def test_price_feed_offline_check():
     state = PriceFeedState(
         symbol="Crypto.BTC/USD",
         asset_type="Crypto",
