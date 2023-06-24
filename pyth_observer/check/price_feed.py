@@ -198,7 +198,10 @@ class PriceFeedCrossChainOnlineCheck(PriceFeedCheck):
         if not self.__state.crosschain_price["publish_time"]:
             return True
 
-        staleness = int(time.time()) - self.__state.crosschain_price["publish_time"]
+        staleness = (
+            self.__state.crosschain_price["snapshot_time"]
+            - self.__state.crosschain_price["publish_time"]
+        )
 
         # Pass if current staleness is less than `max_staleness`
         if staleness < self.__max_staleness:
@@ -208,6 +211,7 @@ class PriceFeedCrossChainOnlineCheck(PriceFeedCheck):
         return False
 
     def error_message(self) -> str:
+        print(self.__state.crosschain_price)
         if self.__state.crosschain_price:
             publish_time = arrow.get(self.__state.crosschain_price["publish_time"])
         else:
