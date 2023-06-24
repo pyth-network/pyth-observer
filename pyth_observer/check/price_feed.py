@@ -211,7 +211,6 @@ class PriceFeedCrossChainOnlineCheck(PriceFeedCheck):
         return False
 
     def error_message(self) -> str:
-        print(self.__state.crosschain_price)
         if self.__state.crosschain_price:
             publish_time = arrow.get(self.__state.crosschain_price["publish_time"])
         else:
