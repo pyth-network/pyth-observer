@@ -1,3 +1,4 @@
+import time
 from typing import Dict, TypedDict
 
 import requests
@@ -11,6 +12,7 @@ class CrosschainPrice(TypedDict):
     price: float
     conf: float
     publish_time: int  # UNIX timestamp
+    snapshot_time: int  # UNIX timestamp
 
 
 class CrosschainPriceObserver:
@@ -51,6 +53,7 @@ class CrosschainPriceObserver:
                 "price": int(data["price"]["price"]) * 10 ** data["price"]["expo"],
                 "conf": int(data["price"]["conf"]) * 10 ** data["price"]["expo"],
                 "publish_time": data["price"]["publish_time"],
+                "snapshot_time": int(time.time()),
             }
             for data in price_feeds
         }

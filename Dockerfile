@@ -27,7 +27,7 @@ ENV \
     POETRY_NO_INTERACTION=1
 
 # Install Poetry - respects $POETRY_VERSION & $POETRY_HOME
-RUN curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/install-poetry.py | python
+RUN curl -sSL https://install.python-poetry.org | python
 ENV PATH="$POETRY_HOME/bin:$PATH"
 
 WORKDIR $APP_PATH
