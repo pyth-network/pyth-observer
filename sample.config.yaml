@@ -3,11 +3,12 @@ network:
   http_endpoint: "https://pythnet.rpcpool.com"
   ws_endpoint: "wss://pythnet.rpcpool.com"
   first_mapping: "AHtgzX45WTKfkPG53L6WYhGEXwQkN1BVknET3sVsLL8J"
-  crosschain_endpoint: "https://xc-mainnet.pyth.network"
+  crosschain_endpoint: "https://hermes.pyth.network"
   request_rate_limit: 10
   request_rate_period: 1
 events:
-  - DatadogEvent
+  # NOTE: Uncomment to enable Datadog metrics, see README.md for datadog credential docs.
+  # - DatadogEvent
   - LogEvent
 checks:
   global:

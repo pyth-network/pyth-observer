@@ -42,8 +42,11 @@ class CrosschainPriceObserver:
             for ids in chunked(price_feed_ids, 25):
                 price_feeds_url = f"{self.url}/api/latest_price_feeds"
 
+                # aiohttp does not support encoding array params using PHP-style `ids=[]`
+                # naming, so we encode it manually and append to the URL.
+                query_string = "?" + "&".join(f"ids[]={v}" for v in ids)
                 async with session.get(
-                    price_feeds_url, params={"ids": ids}
+                    price_feeds_url + query_string,
                 ) as response:
                     price_feeds += await response.json()
 
