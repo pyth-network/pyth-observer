@@ -97,6 +97,8 @@ class Observer:
                     # Handle potential None for min_publishers
                     if (
                         price_account.min_publishers is None
+                        # When min_publishers is high it means that the price is not production-ready
+                        # yet and it is still being tested. We need no alerting for these prices.
                         or price_account.min_publishers >= 10
                     ):
                         continue
@@ -111,11 +113,6 @@ class Observer:
 
                     if not price_account.aggregate_price_info:
                         raise RuntimeError("Aggregate price info is missing")
-
-                    # When min_publishers is high it means that the price is not production-ready
-                    # yet and it is still being tested. We need no alerting for these prices.
-                    if price_account.min_publishers >= 10:
-                        continue
 
                     states.append(
                         PriceFeedState(
