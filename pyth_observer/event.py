@@ -5,9 +5,7 @@ from datadog_api_client.api_client import AsyncApiClient as DatadogAPI
 from datadog_api_client.configuration import Configuration as DatadogConfig
 from datadog_api_client.v1.api.events_api import EventsApi as DatadogEventAPI
 from datadog_api_client.v1.model.event_alert_type import EventAlertType
-from datadog_api_client.v1.model.event_create_request import (
-    EventCreateRequest as DatadogAPIEvent,
-)
+from datadog_api_client.v1.model.event_create_request import EventCreateRequest
 from loguru import logger
 
 from pyth_observer.check import Check
@@ -45,7 +43,7 @@ class DatadogEvent(Event):
             # An example would be: PublisherPriceCheck-Crypto.AAVE/USD-9TvAYCUkGajRXs....
             aggregation_key += "-" + self.check.state().public_key.key
 
-        event = DatadogAPIEvent(
+        event = EventCreateRequest(
             aggregation_key=aggregation_key,
             title=text.split("\n")[0],
             text=text,
@@ -58,6 +56,9 @@ class DatadogEvent(Event):
             alert_type=EventAlertType.WARNING,
             source_type_name="my_apps",
         )
+
+        # Cast the event to EventCreateRequest explicitly because pyright complains that the previous line returns UnparsedObject | Unknown | None
+        event = cast(EventCreateRequest, event)
 
         # This assumes that DD_API_KEY and DD_SITE env. variables are set. Also,
         # using the async API makes the events api return a coroutine, so we

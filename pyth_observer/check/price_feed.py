@@ -1,16 +1,14 @@
-import datetime
 import time
 from dataclasses import dataclass
+from datetime import datetime
 from textwrap import dedent
 from typing import Dict, Optional, Protocol, runtime_checkable
+from zoneinfo import ZoneInfo
 
 import arrow
-from datetime import datetime
-from zoneinfo import ZoneInfo
+from pythclient.calendar import is_market_open
 from pythclient.pythaccounts import PythPriceStatus
 from pythclient.solana import SolanaPublicKey
-from pythclient.calendar import is_market_open
-
 
 from pyth_observer.crosschain import CrosschainPrice
 
@@ -35,13 +33,17 @@ PriceFeedCheckConfig = Dict[str, str | float | int | bool]
 
 @runtime_checkable
 class PriceFeedCheck(Protocol):
-    def __init__(self, state: PriceFeedState, config: PriceFeedCheckConfig): ...
+    def __init__(self, state: PriceFeedState, config: PriceFeedCheckConfig):
+        ...
 
-    def state(self) -> PriceFeedState: ...
+    def state(self) -> PriceFeedState:
+        ...
 
-    def run(self) -> bool: ...
+    def run(self) -> bool:
+        ...
 
-    def error_message(self) -> str: ...
+    def error_message(self) -> str:
+        ...
 
 
 class PriceFeedOfflineCheck(PriceFeedCheck):
