@@ -94,16 +94,25 @@ class Observer:
                 )
 
                 for _, price_account in price_accounts.items():
+                    # Handle potential None for min_publishers
+                    if (
+                        price_account.min_publishers is None
+                        # When min_publishers is high it means that the price is not production-ready
+                        # yet and it is still being tested. We need no alerting for these prices.
+                        or price_account.min_publishers >= 10
+                    ):
+                        continue
+
+                    # Ensure latest_block_slot is not None or provide a default value
+                    latest_block_slot = (
+                        price_account.slot if price_account.slot is not None else -1
+                    )
+
                     if not price_account.aggregate_price_status:
                         raise RuntimeError("Price account status is missing")
 
                     if not price_account.aggregate_price_info:
                         raise RuntimeError("Aggregate price info is missing")
-
-                    # When min_publishers is high it means that the price is not production-ready
-                    # yet and it is still being tested. We need no alerting for these prices.
-                    if price_account.min_publishers >= 10:
-                        continue
 
                     states.append(
                         PriceFeedState(
@@ -112,7 +121,7 @@ class Observer:
                             public_key=price_account.key,
                             status=price_account.aggregate_price_status,
                             # this is the solana block slot when price account was fetched
-                            latest_block_slot=price_account.slot,
+                            latest_block_slot=latest_block_slot,
                             latest_trading_slot=price_account.last_slot,
                             price_aggregate=price_account.aggregate_price_info.price,
                             confidence_interval_aggregate=price_account.aggregate_price_info.confidence_interval,
@@ -141,7 +150,7 @@ class Observer:
                                 slot=component.latest_price_info.pub_slot,
                                 aggregate_slot=price_account.last_slot,
                                 # this is the solana block slot when price account was fetched
-                                latest_block_slot=price_account.slot,
+                                latest_block_slot=latest_block_slot,
                                 status=component.latest_price_info.price_status,
                                 aggregate_status=price_account.aggregate_price_status,
                             )

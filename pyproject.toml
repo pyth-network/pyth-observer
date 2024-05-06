@@ -4,7 +4,7 @@ ignore_missing_imports = true
 
 [tool.poetry]
 name = "pyth-observer"
-version = "0.1.12"
+version = "0.1.13"
 description = "Alerts and stuff"
 authors = []
 readme = "README.md"
@@ -20,9 +20,8 @@ datadog-api-client = { extras = ["async"], version = "^2.5.0" }
 loguru = "^0.6.0"
 more-itertools = "^9.0.0"
 prometheus-client = "0.15.0"
-pytz = "^2022.4"
 pycoingecko = "2.2.0"
-pythclient = "0.1.4"
+pythclient = "^0.1.24"
 pyyaml = "^6.0"
 throttler = "1.2.1"
 types-pyyaml = "^6.0.12"
