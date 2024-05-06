@@ -5,11 +5,13 @@ from textwrap import dedent
 from typing import Dict, Optional, Protocol, runtime_checkable
 
 import arrow
-import pytz
+from datetime import datetime
+from zoneinfo import ZoneInfo
 from pythclient.pythaccounts import PythPriceStatus
 from pythclient.solana import SolanaPublicKey
+from pythclient.calendar import is_market_open
 
-from pyth_observer.calendar import HolidayCalendar
+
 from pyth_observer.crosschain import CrosschainPrice
 
 
@@ -33,17 +35,13 @@ PriceFeedCheckConfig = Dict[str, str | float | int | bool]
 
 @runtime_checkable
 class PriceFeedCheck(Protocol):
-    def __init__(self, state: PriceFeedState, config: PriceFeedCheckConfig):
-        ...
+    def __init__(self, state: PriceFeedState, config: PriceFeedCheckConfig): ...
 
-    def state(self) -> PriceFeedState:
-        ...
+    def state(self) -> PriceFeedState: ...
 
-    def run(self) -> bool:
-        ...
+    def run(self) -> bool: ...
 
-    def error_message(self) -> str:
-        ...
+    def error_message(self) -> str: ...
 
 
 class PriceFeedOfflineCheck(PriceFeedCheck):
@@ -56,13 +54,13 @@ class PriceFeedOfflineCheck(PriceFeedCheck):
         return self.__state
 
     def run(self) -> bool:
-        is_market_open = HolidayCalendar().is_market_open(
+        market_open = is_market_open(
             self.__state.asset_type,
-            datetime.datetime.now(tz=pytz.timezone("America/New_York")),
+            datetime.now(ZoneInfo("America/New_York")),
         )
 
         # Skip if market is not open
-        if not is_market_open:
+        if not market_open:
             return True
 
         distance = abs(
@@ -181,13 +179,13 @@ class PriceFeedCrossChainOnlineCheck(PriceFeedCheck):
         if self.__state.status != PythPriceStatus.TRADING:
             return True
 
-        is_market_open = HolidayCalendar().is_market_open(
+        market_open = is_market_open(
             self.__state.asset_type,
-            datetime.datetime.now(tz=pytz.timezone("America/New_York")),
+            datetime.now(ZoneInfo("America/New_York")),
         )
 
         # Skip if not trading hours (for equities)
-        if not is_market_open:
+        if not market_open:
             return True
 
         # Price should exist, it fails otherwise
@@ -243,13 +241,13 @@ class PriceFeedCrossChainDeviationCheck(PriceFeedCheck):
         if self.__state.status != PythPriceStatus.TRADING:
             return True
 
-        is_market_open = HolidayCalendar().is_market_open(
+        market_open = is_market_open(
             self.__state.asset_type,
-            datetime.datetime.now(tz=pytz.timezone("America/New_York")),
+            datetime.now(ZoneInfo("America/New_York")),
         )
 
         # Skip if not trading hours (for equities)
-        if not is_market_open:
+        if not market_open:
             return True
 
         staleness = int(time.time()) - self.__state.crosschain_price["publish_time"]
