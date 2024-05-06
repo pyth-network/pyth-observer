@@ -1,6 +1,6 @@
 import asyncio
 import os
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from base58 import b58decode
 from loguru import logger
@@ -51,9 +51,10 @@ class Observer:
         config: Dict[str, Any],
         publishers: Dict[str, str],
         coingecko_mapping: Dict[str, Symbol],
+        telegram_mapping: Optional[Dict[str, str]] = None,
     ):
         self.config = config
-        self.dispatch = Dispatch(config, publishers)
+        self.dispatch = Dispatch(config, publishers, telegram_mapping=telegram_mapping)
         self.publishers = publishers
         self.pyth_client = PythClient(
             solana_endpoint=config["network"]["http_endpoint"],

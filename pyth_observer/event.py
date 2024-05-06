@@ -1,20 +1,25 @@
 import os
 from typing import Dict, Literal, Protocol, TypedDict, cast
 
+import aiohttp
 from datadog_api_client.api_client import AsyncApiClient as DatadogAPI
 from datadog_api_client.configuration import Configuration as DatadogConfig
 from datadog_api_client.v1.api.events_api import EventsApi as DatadogEventAPI
 from datadog_api_client.v1.model.event_alert_type import EventAlertType
 from datadog_api_client.v1.model.event_create_request import EventCreateRequest
+from dotenv import load_dotenv
 from loguru import logger
 
 from pyth_observer.check import Check
 from pyth_observer.check.publisher import PublisherCheck
 
+load_dotenv()
+
 
 class Context(TypedDict):
     network: str
     publishers: Dict[str, str]
+    telegram_mapping: Dict[str, str]
 
 
 class Event(Protocol):
@@ -94,3 +99,37 @@ class LogEvent(Event):
 
         level = cast(LogEventLevel, os.environ.get("LOG_EVENT_LEVEL", "INFO"))
         logger.log(level, text.replace("\n", ". "))
+
+
+class TelegramEvent(Event):
+    def __init__(self, check: Check, context: Context):
+        self.check = check
+        self.context = context
+
+    async def send(self):
+        text = self.check.error_message()
+        # Extract the publisher key from the message text
+        publisher_key = text[text.find("(") + 1 : text.find(")")]
+        # Retrieve the chat ID from the telegram_mapping using the publisher key
+        chat_id = self.context["telegram_mapping"].get(publisher_key, None)
+
+        if chat_id is None:
+            logger.warning(
+                f"Telegram chat ID not found for publisher key {publisher_key}"
+            )
+            return
+
+        telegram_api_url = f"https://api.telegram.org/bot{os.environ['TELEGRAM_BOT_TOKEN']}/sendMessage"
+        message_data = {
+            "chat_id": chat_id,
+            "text": text,
+            "parse_mode": "Markdown",
+        }
+
+        async with aiohttp.ClientSession() as session:
+            async with session.post(telegram_api_url, json=message_data) as response:
+                if response.status != 200:
+                    response_text = await response.text()
+                    raise RuntimeError(
+                        f"Failed to send Telegram message: {response_text}"
+                    )

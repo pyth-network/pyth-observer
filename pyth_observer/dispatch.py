@@ -9,10 +9,12 @@ from pyth_observer.check.price_feed import PRICE_FEED_CHECKS, PriceFeedState
 from pyth_observer.check.publisher import PUBLISHER_CHECKS, PublisherState
 from pyth_observer.event import DatadogEvent  # Used dynamically
 from pyth_observer.event import LogEvent  # Used dynamically
+from pyth_observer.event import TelegramEvent  # Used dynamically
 from pyth_observer.event import Event
 
 assert DatadogEvent
 assert LogEvent
+assert TelegramEvent
 
 
 class Dispatch:
@@ -21,9 +23,10 @@ class Dispatch:
     notifiers for the checks that failed.
     """
 
-    def __init__(self, config, publishers):
+    def __init__(self, config, publishers, telegram_mapping=None):
         self.config = config
         self.publishers = publishers
+        self.telegram_mapping = telegram_mapping
         self.price_feed_check_gauge = Gauge(
             "price_feed_check_failed",
             "Price feed check failure status",
@@ -52,6 +55,7 @@ class Dispatch:
         context = {
             "network": self.config["network"]["name"],
             "publishers": self.publishers,
+            "telegram_mapping": self.telegram_mapping or {},
         }
 
         for check in failed_checks:
