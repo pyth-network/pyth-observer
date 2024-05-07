@@ -1,0 +1,71 @@
+name: Docker Image Build
+on:
+  push:
+    tags:
+      - v*
+  pull_request:
+    branches: ["main"]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  pre-commit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: ./.github/actions/python-poetry
+      - uses: pre-commit/action@v2.0.3
+
+  run-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: ./.github/actions/python-poetry
+      - run: poetry run pytest
+        env:
+          TEST_MODE: "1"
+
+  build-and-push:
+    permissions:
+      contents: read
+      packages: write
+    runs-on: ubuntu-latest
+    needs: [pre-commit, run-tests]
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      # Set image tag to git tag, or commit hash for pull request
+      - name: Set IMAGE_TAG
+        run: |
+          if [ "${{ github.event_name }}" == "push" ]; then
+            echo "IMAGE_TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
+          else
+            echo "IMAGE_TAG=${{ github.sha }}" >> $GITHUB_ENV
+          fi
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=${{ env.IMAGE_TAG }}
+            type=raw,value=${{ github.sha }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
