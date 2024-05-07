@@ -102,38 +102,41 @@ class LogEvent(Event):
 
 
 class TelegramEvent(Event):
-    def __init__(self, check: PublisherCheck, context: Context):
+    def __init__(self, check: Check, context: Context):
         self.check = check
         self.context = context
 
     async def send(self):
-        text = self.check.error_message()
-        publisher_key = self.check.state().public_key.key
-        publisher = self.context["publishers"].get(publisher_key, None)
-        # Ensure publisher is not None and has contact_info before accessing telegram_chat_id
-        chat_id = (
-            publisher.contact_info.telegram_chat_id
-            if publisher is not None and publisher.contact_info is not None
-            else None
-        )
-
-        if chat_id is None:
-            logger.warning(
-                f"Telegram chat ID not found for publisher key {publisher_key}"
+        if self.check.__class__.__bases__ == (PublisherCheck,):
+            text = self.check.error_message()
+            publisher_key = self.check.state().public_key.key
+            publisher = self.context["publishers"].get(publisher_key, None)
+            # Ensure publisher is not None and has contact_info before accessing telegram_chat_id
+            chat_id = (
+                publisher.contact_info.telegram_chat_id
+                if publisher is not None and publisher.contact_info is not None
+                else None
             )
-            return
 
-        telegram_api_url = f"https://api.telegram.org/bot{os.environ['TELEGRAM_BOT_TOKEN']}/sendMessage"
-        message_data = {
-            "chat_id": chat_id,
-            "text": text,
-            "parse_mode": "Markdown",
-        }
+            if chat_id is None:
+                logger.warning(
+                    f"Telegram chat ID not found for publisher key {publisher_key}"
+                )
+                return
 
-        async with aiohttp.ClientSession() as session:
-            async with session.post(telegram_api_url, json=message_data) as response:
-                if response.status != 200:
-                    response_text = await response.text()
-                    raise RuntimeError(
-                        f"Failed to send Telegram message: {response_text}"
-                    )
+            telegram_api_url = f"https://api.telegram.org/bot{os.environ['TELEGRAM_BOT_TOKEN']}/sendMessage"
+            message_data = {
+                "chat_id": chat_id,
+                "text": text,
+                "parse_mode": "Markdown",
+            }
+
+            async with aiohttp.ClientSession() as session:
+                async with session.post(
+                    telegram_api_url, json=message_data
+                ) as response:
+                    if response.status != 200:
+                        response_text = await response.text()
+                        logger.error(
+                            f"Failed to send Telegram message: {response_text}"
+                        )
