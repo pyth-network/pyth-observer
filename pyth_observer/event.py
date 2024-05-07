@@ -102,14 +102,13 @@ class LogEvent(Event):
 
 
 class TelegramEvent(Event):
-    def __init__(self, check: Check, context: Context):
+    def __init__(self, check: PublisherCheck, context: Context):
         self.check = check
         self.context = context
 
     async def send(self):
         text = self.check.error_message()
-        # Extract the publisher key from the message text
-        publisher_key = text[text.find("(") + 1 : text.find(")")]
+        publisher_key = self.check.state().public_key.key
         publisher = self.context["publishers"].get(publisher_key, None)
         # Ensure publisher is not None and has contact_info before accessing telegram_chat_id
         chat_id = (
