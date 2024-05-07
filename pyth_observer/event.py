@@ -12,14 +12,14 @@ from loguru import logger
 
 from pyth_observer.check import Check
 from pyth_observer.check.publisher import PublisherCheck
+from pyth_observer.models import Publisher
 
 load_dotenv()
 
 
 class Context(TypedDict):
     network: str
-    publishers: Dict[str, str]
-    telegram_mapping: Dict[str, str]
+    publishers: Dict[str, Publisher]
 
 
 class Event(Protocol):
@@ -110,8 +110,13 @@ class TelegramEvent(Event):
         text = self.check.error_message()
         # Extract the publisher key from the message text
         publisher_key = text[text.find("(") + 1 : text.find(")")]
-        # Retrieve the chat ID from the telegram_mapping using the publisher key
-        chat_id = self.context["telegram_mapping"].get(publisher_key, None)
+        publisher = self.context["publishers"].get(publisher_key, None)
+        # Ensure publisher is not None and has contact_info before accessing telegram_chat_id
+        chat_id = (
+            publisher.contact_info.telegram_chat_id
+            if publisher is not None and publisher.contact_info is not None
+            else None
+        )
 
         if chat_id is None:
             logger.warning(

@@ -23,10 +23,9 @@ class Dispatch:
     notifiers for the checks that failed.
     """
 
-    def __init__(self, config, publishers, telegram_mapping=None):
+    def __init__(self, config, publishers):
         self.config = config
         self.publishers = publishers
-        self.telegram_mapping = telegram_mapping
         self.price_feed_check_gauge = Gauge(
             "price_feed_check_failed",
             "Price feed check failure status",
@@ -55,7 +54,6 @@ class Dispatch:
         context = {
             "network": self.config["network"]["name"],
             "publishers": self.publishers,
-            "telegram_mapping": self.telegram_mapping or {},
         }
 
         for check in failed_checks:

@@ -7,7 +7,7 @@ import yaml
 from loguru import logger
 from prometheus_client import start_http_server
 
-from pyth_observer import Observer
+from pyth_observer import Observer, Publisher
 
 
 @click.command()
@@ -30,27 +30,23 @@ from pyth_observer import Observer
     required=True,
 )
 @click.option(
-    "--telegram-mapping",
-    help="Path to YAML/JSON file with publisher key-Telegram chat ID mappings",
-    envvar="TELEGRAM_MAPPING",
-    required=False,
-)
-@click.option(
     "--prometheus-port",
     help="Port number for Prometheus metrics endpoint",
     envvar="PROMETHEUS_PORT",
     default="9001",
 )
-def run(config, publishers, coingecko_mapping, telegram_mapping, prometheus_port):
+def run(config, publishers, coingecko_mapping, prometheus_port):
     config_ = yaml.safe_load(open(config, "r"))
-    publishers_ = yaml.safe_load(open(publishers, "r"))
-    publishers_inverted = {v: k for k, v in publishers_.items()}
+    # Load publishers YAML file and convert to dictionary of Publisher instances
+    publishers_raw = yaml.safe_load(open(publishers, "r"))
+    publishers_ = {
+        publisher["key"]: Publisher(**publisher) for publisher in publishers_raw
+    }
     coingecko_mapping_ = yaml.safe_load(open(coingecko_mapping, "r"))
-    telegram_mapping_ = (
-        yaml.safe_load(open(telegram_mapping, "r")) if telegram_mapping else {}
-    )
     observer = Observer(
-        config_, publishers_inverted, coingecko_mapping_, telegram_mapping_
+        config_,
+        publishers_,
+        coingecko_mapping_,
     )
 
     start_http_server(int(prometheus_port))

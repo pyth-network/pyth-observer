@@ -1,6 +1,6 @@
 import asyncio
 import os
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Tuple
 
 from base58 import b58decode
 from loguru import logger
@@ -22,6 +22,7 @@ from pyth_observer.coingecko import Symbol, get_coingecko_prices
 from pyth_observer.crosschain import CrosschainPrice
 from pyth_observer.crosschain import CrosschainPriceObserver as Crosschain
 from pyth_observer.dispatch import Dispatch
+from pyth_observer.models import Publisher
 
 PYTHTEST_HTTP_ENDPOINT = "https://api.pythtest.pyth.network/"
 PYTHTEST_WS_ENDPOINT = "wss://api.pythtest.pyth.network/"
@@ -49,12 +50,11 @@ class Observer:
     def __init__(
         self,
         config: Dict[str, Any],
-        publishers: Dict[str, str],
+        publishers: Dict[str, Publisher],
         coingecko_mapping: Dict[str, Symbol],
-        telegram_mapping: Optional[Dict[str, str]] = None,
     ):
         self.config = config
-        self.dispatch = Dispatch(config, publishers, telegram_mapping=telegram_mapping)
+        self.dispatch = Dispatch(config, publishers)
         self.publishers = publishers
         self.pyth_client = PythClient(
             solana_endpoint=config["network"]["http_endpoint"],
@@ -135,8 +135,9 @@ class Observer:
                     )
 
                     for component in price_account.price_components:
+                        pub = self.publishers.get(component.publisher_key.key, None)
                         publisher_name = (
-                            self.publishers.get(component.publisher_key.key, "")
+                            (pub.name if pub else "")
                             + f" ({component.publisher_key.key})"
                         ).strip()
                         states.append(

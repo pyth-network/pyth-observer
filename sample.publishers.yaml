@@ -1,4 +1,15 @@
-{
-  "publisher1": "66wJmrBqyykL7m4Erj4Ud29qhsm32DHSTo23zooupJrJ",
-  "publisher2": "3BkoB5MBSrrnDY7qe694UAuPpeMg7zJnodwbCnayNYzC",
-}
+- name: publisher1
+  key: "66wJmrBqyykL7m4Erj4Ud29qhsm32DHSTo23zooupJrJ"
+  contact_info:
+    # Optional fields for contact information
+    telegram_chat_id:
+    email:
+    slack_channel_id:
+
+- name: publisher2
+  key: "3BkoB5MBSrrnDY7qe694UAuPpeMg7zJnodwbCnayNYzC"
+  contact_info:
+    # Optional fields for contact information
+    telegram_chat_id:
+    email:
+    slack_channel_id:
