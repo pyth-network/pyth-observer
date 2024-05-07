@@ -57,7 +57,7 @@ class PriceFeedOfflineCheck(PriceFeedCheck):
 
     def run(self) -> bool:
         market_open = is_market_open(
-            self.__state.asset_type,
+            self.__state.asset_type.lower(),
             datetime.now(ZoneInfo("America/New_York")),
         )
 
@@ -182,7 +182,7 @@ class PriceFeedCrossChainOnlineCheck(PriceFeedCheck):
             return True
 
         market_open = is_market_open(
-            self.__state.asset_type,
+            self.__state.asset_type.lower(),
             datetime.now(ZoneInfo("America/New_York")),
         )
 
@@ -244,7 +244,7 @@ class PriceFeedCrossChainDeviationCheck(PriceFeedCheck):
             return True
 
         market_open = is_market_open(
-            self.__state.asset_type,
+            self.__state.asset_type.lower(),
             datetime.now(ZoneInfo("America/New_York")),
         )
 
