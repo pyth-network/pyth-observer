@@ -1,5 +1,4 @@
 import os
-import sys
 from typing import Dict, Literal, Protocol, TypedDict, cast
 
 import aiohttp
