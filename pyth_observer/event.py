@@ -1,4 +1,5 @@
 import os
+import sys
 from typing import Dict, Literal, Protocol, TypedDict, cast
 
 import aiohttp
@@ -15,7 +16,6 @@ from pyth_observer.check.publisher import PublisherCheck
 from pyth_observer.models import Publisher
 
 load_dotenv()
-
 
 class Context(TypedDict):
     network: str
@@ -84,9 +84,6 @@ class DatadogEvent(Event):
                 )
 
 
-LogEventLevel = Literal["DEBUG", "INFO", "WARNING", "ERROR"]
-
-
 class LogEvent(Event):
     def __init__(self, check: Check, context: Context):
         self.check = check
@@ -95,10 +92,9 @@ class LogEvent(Event):
     async def send(self):
         # Publisher checks expect the key -> name mapping of publishers when
         # generating the error title/message.
-        text = self.check.error_message()
-
-        level = cast(LogEventLevel, os.environ.get("LOG_EVENT_LEVEL", "INFO"))
-        logger.log(level, text)
+        event = self.check.error_message()
+        with logger.contextualize(**event):
+            logger.info(event["msg"])
 
 
 class TelegramEvent(Event):

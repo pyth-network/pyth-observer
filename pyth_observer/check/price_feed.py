@@ -42,7 +42,7 @@ class PriceFeedCheck(Protocol):
     def run(self) -> bool:
         ...
 
-    def error_message(self) -> str:
+    def error_message(self) -> dict:
         ...
 
 
@@ -80,7 +80,7 @@ class PriceFeedOfflineCheck(PriceFeedCheck):
         # Fail
         return False
 
-    def error_message(self) -> str:
+    def error_message(self) -> dict:
         distance = self.__state.latest_block_slot - self.__state.latest_trading_slot
         return {
             "msg": f"{self.__state.symbol} is offline (either non-trading/stale). Last update {distance} slots ago.",
@@ -124,7 +124,7 @@ class PriceFeedCoinGeckoCheck(PriceFeedCheck):
         # Fail
         return False
 
-    def error_message(self) -> str:
+    def error_message(self) -> dict:
         return {
             "msg": f"{self.__state.symbol} is too far from Coingecko's price.",
             "type": "PriceFeedCheck",
@@ -154,7 +154,7 @@ class PriceFeedConfidenceIntervalCheck(PriceFeedCheck):
         # Fail
         return False
 
-    def error_message(self) -> str:
+    def error_message(self) -> dict:
         return {
             "msg": f"{self.__state.symbol} confidence interval is too low.",
             "type": "PriceFeedCheck",
@@ -204,7 +204,7 @@ class PriceFeedCrossChainOnlineCheck(PriceFeedCheck):
         # Fail
         return False
 
-    def error_message(self) -> str:
+    def error_message(self) -> dict:
         if self.__state.crosschain_price:
             publish_time = arrow.get(self.__state.crosschain_price["publish_time"])
         else:
@@ -263,7 +263,7 @@ class PriceFeedCrossChainDeviationCheck(PriceFeedCheck):
         # Fail
         return False
 
-    def error_message(self) -> str:
+    def error_message(self) -> dict:
         # It can never happen because of the check logic but linter could not understand it.
         price = (
             self.__state.crosschain_price["price"]

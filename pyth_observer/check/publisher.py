@@ -38,7 +38,7 @@ class PublisherCheck(Protocol):
     def run(self) -> bool:
         ...
 
-    def error_message(self) -> str:
+    def error_message(self) -> dict:
         ...
 
 
@@ -78,7 +78,7 @@ class PublisherWithinAggregateConfidenceCheck(PublisherCheck):
         # Fail
         return False
 
-    def error_message(self) -> str:
+    def error_message(self) -> dict:
         diff = self.__state.price - self.__state.price_aggregate
         intervals_away = abs(diff / self.__state.confidence_interval_aggregate)
         return {
@@ -116,7 +116,7 @@ class PublisherConfidenceIntervalCheck(PublisherCheck):
         # Fail
         return False
 
-    def error_message(self) -> str:
+    def error_message(self) -> dict:
         return {
             "msg": f"{self.__state.publisher_name} confidence interval is too tight.",
             "type": "PublisherCheck",
@@ -150,7 +150,7 @@ class PublisherOfflineCheck(PublisherCheck):
         # Fail
         return False
 
-    def error_message(self) -> str:
+    def error_message(self) -> dict:
         distance = self.__state.latest_block_slot - self.__state.slot
         return {
             "msg": f"{self.__state.publisher_name} hasn't published recently for {distance} slots.",
@@ -198,7 +198,7 @@ class PublisherPriceCheck(PublisherCheck):
         # Fail
         return False
 
-    def error_message(self) -> str:
+    def error_message(self) -> dict:
         deviation = (self.ci_adjusted_price_diff() / self.__state.price_aggregate) * 100
         return {
             "msg": f"{self.__state.publisher_name} price is too far from aggregate price.",
