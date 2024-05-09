@@ -16,6 +16,7 @@ from pyth_observer.models import Publisher
 
 load_dotenv()
 
+
 class Context(TypedDict):
     network: str
     publishers: Dict[str, Publisher]

@@ -87,7 +87,7 @@ class PublisherWithinAggregateConfidenceCheck(PublisherCheck):
             "publisher": self.__state.publisher_name,
             "symbol": self.__state.symbol,
             "publisher_price": f"{self.__state.price} ± {self.__state.confidence_interval}",
-            "aggregate_price": f"{self.__state.price_aggregate} ± {self.__state.confidence_interval_aggregate}"
+            "aggregate_price": f"{self.__state.price_aggregate} ± {self.__state.confidence_interval_aggregate}",
         }
 
 
@@ -123,7 +123,7 @@ class PublisherConfidenceIntervalCheck(PublisherCheck):
             "publisher": self.__state.publisher_name,
             "symbol": self.__state.symbol,
             "price": self.__state.price,
-            "confidence_interval": self.__state.confidence_interval
+            "confidence_interval": self.__state.confidence_interval,
         }
 
 
@@ -158,7 +158,7 @@ class PublisherOfflineCheck(PublisherCheck):
             "publisher": self.__state.publisher_name,
             "symbol": self.__state.symbol,
             "publisher_slot": self.__state.slot,
-            "aggregate_slot": self.__state.aggregate_slot
+            "aggregate_slot": self.__state.aggregate_slot,
         }
 
 
@@ -207,7 +207,7 @@ class PublisherPriceCheck(PublisherCheck):
             "symbol": self.__state.symbol,
             "publisher_price": f"{self.__state.price} ± {self.__state.confidence_interval}",
             "aggregate_price": f"{self.__state.price_aggregate} ± {self.__state.confidence_interval_aggregate}",
-            "deviation": deviation
+            "deviation": deviation,
         }
 
     # Returns the distance between the aggregate price and the closest side of the publisher's confidence interval
