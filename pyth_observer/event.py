@@ -1,5 +1,6 @@
+import json
 import os
-from typing import Dict, Literal, Protocol, TypedDict, cast
+from typing import Dict, Protocol, TypedDict, cast
 
 import aiohttp
 from datadog_api_client.api_client import AsyncApiClient as DatadogAPI
@@ -38,7 +39,7 @@ class DatadogEvent(Event):
     async def send(self):
         # Publisher checks expect the key -> name mapping of publishers when
         # generating the error title/message.
-        text = self.check.error_message()
+        event = self.check.error_message()
 
         # An example is: PriceFeedOfflineCheck-Crypto.AAVE/USD
         aggregation_key = f"{self.check.__class__.__name__}-{self.check.state().symbol}"
@@ -50,8 +51,8 @@ class DatadogEvent(Event):
 
         event = EventCreateRequest(
             aggregation_key=aggregation_key,
-            title=text.split("\n")[0],
-            text=text,
+            title=event["msg"],
+            text=json.dumps(event),
             tags=[
                 "service:observer",
                 f"network:{self.context['network']}",
@@ -84,9 +85,6 @@ class DatadogEvent(Event):
                 )
 
 
-LogEventLevel = Literal["DEBUG", "INFO", "WARNING", "ERROR"]
-
-
 class LogEvent(Event):
     def __init__(self, check: Check, context: Context):
         self.check = check
@@ -95,10 +93,9 @@ class LogEvent(Event):
     async def send(self):
         # Publisher checks expect the key -> name mapping of publishers when
         # generating the error title/message.
-        text = self.check.error_message()
-
-        level = cast(LogEventLevel, os.environ.get("LOG_EVENT_LEVEL", "INFO"))
-        logger.log(level, text.replace("\n", ". "))
+        event = self.check.error_message()
+        with logger.contextualize(**event):
+            logger.info(event["msg"])
 
 
 class TelegramEvent(Event):
