@@ -81,17 +81,14 @@ class PublisherWithinAggregateConfidenceCheck(PublisherCheck):
     def error_message(self) -> str:
         diff = self.__state.price - self.__state.price_aggregate
         intervals_away = abs(diff / self.__state.confidence_interval_aggregate)
-
-        return dedent(
-            f"""
-            {self.__state.publisher_name} price not within aggregate confidence.
-            It is {intervals_away} times away from confidence.
-
-            Symbol: {self.__state.symbol}
-            Publisher price: {self.__state.price} ± {self.__state.confidence_interval}
-            Aggregate price: {self.__state.price_aggregate} ± {self.__state.confidence_interval_aggregate}
-            """
-        ).strip()
+        return {
+            "msg": f"{self.__state.publisher_name} price is {intervals_away} times away from confidence.",
+            "type": "PublisherCheck",
+            "publisher": self.__state.publisher_name,
+            "symbol": self.__state.symbol,
+            "publisher_price": f"{self.__state.price} ± {self.__state.confidence_interval}",
+            "aggregate_price": f"{self.__state.price_aggregate} ± {self.__state.confidence_interval_aggregate}"
+        }
 
 
 class PublisherConfidenceIntervalCheck(PublisherCheck):
@@ -120,15 +117,14 @@ class PublisherConfidenceIntervalCheck(PublisherCheck):
         return False
 
     def error_message(self) -> str:
-        return dedent(
-            f"""
-            {self.__state.publisher_name} confidence interval is too tight.
-
-            Symbol: {self.__state.symbol}
-            Price: {self.__state.price}
-            Confidence interval: {self.__state.confidence_interval}
-            """
-        ).strip()
+        return {
+            "msg": f"{self.__state.publisher_name} confidence interval is too tight.",
+            "type": "PublisherCheck",
+            "publisher": self.__state.publisher_name,
+            "symbol": self.__state.symbol,
+            "price": self.__state.price,
+            "confidence_interval": self.__state.confidence_interval
+        }
 
 
 class PublisherOfflineCheck(PublisherCheck):
@@ -156,15 +152,14 @@ class PublisherOfflineCheck(PublisherCheck):
 
     def error_message(self) -> str:
         distance = self.__state.latest_block_slot - self.__state.slot
-        return dedent(
-            f"""
-            {self.__state.publisher_name} hasn't published recently for {distance} slots.
-
-            Symbol: {self.__state.symbol}
-            Publisher slot: {self.__state.slot}
-            Aggregate slot: {self.__state.aggregate_slot}
-            """
-        ).strip()
+        return {
+            "msg": f"{self.__state.publisher_name} hasn't published recently for {distance} slots.",
+            "type": "PublisherCheck",
+            "publisher": self.__state.publisher_name,
+            "symbol": self.__state.symbol,
+            "publisher_slot": self.__state.slot,
+            "aggregate_slot": self.__state.aggregate_slot
+        }
 
 
 class PublisherPriceCheck(PublisherCheck):
@@ -205,17 +200,15 @@ class PublisherPriceCheck(PublisherCheck):
 
     def error_message(self) -> str:
         deviation = (self.ci_adjusted_price_diff() / self.__state.price_aggregate) * 100
-
-        return dedent(
-            f"""
-            {self.__state.publisher_name} price is too far from aggregate price.
-
-            Symbol: {self.__state.symbol}
-            Publisher price: {self.__state.price} ± {self.__state.confidence_interval}
-            Aggregate price: {self.__state.price_aggregate} ± {self.__state.confidence_interval_aggregate}
-            Deviation: {deviation}%
-            """
-        ).strip()
+        return {
+            "msg": f"{self.__state.publisher_name} price is too far from aggregate price.",
+            "type": "PublisherCheck",
+            "publisher": self.__state.publisher_name,
+            "symbol": self.__state.symbol,
+            "publisher_price": f"{self.__state.price} ± {self.__state.confidence_interval}",
+            "aggregate_price": f"{self.__state.price_aggregate} ± {self.__state.confidence_interval_aggregate}",
+            "deviation": deviation
+        }
 
     # Returns the distance between the aggregate price and the closest side of the publisher's confidence interval
     # Returns 0 if the aggregate price is within the publisher's confidence interval.

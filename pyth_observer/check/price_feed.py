@@ -82,16 +82,13 @@ class PriceFeedOfflineCheck(PriceFeedCheck):
 
     def error_message(self) -> str:
         distance = self.__state.latest_block_slot - self.__state.latest_trading_slot
-        return dedent(
-            f"""
-            {self.__state.symbol} is offline (either non-trading/stale).
-            It is not updated for {distance} slots.
-
-            Latest trading slot: {self.__state.latest_trading_slot}
-            Block slot: {self.__state.latest_block_slot}
-            """
-        ).strip()
-
+        return {
+            "msg": f"{self.__state.symbol} is offline (either non-trading/stale). Last update {distance} slots ago.",
+            "type": "PriceFeedCheck",
+            "symbol": self.__state.symbol,
+            "latest_trading_slot": self.__state.latest_trading_slot,
+            "block_slot": self.__state.latest_block_slot
+        }
 
 class PriceFeedCoinGeckoCheck(PriceFeedCheck):
     def __init__(self, state: PriceFeedState, config: PriceFeedCheckConfig):
@@ -128,14 +125,13 @@ class PriceFeedCoinGeckoCheck(PriceFeedCheck):
         return False
 
     def error_message(self) -> str:
-        return dedent(
-            f"""
-            {self.__state.symbol} is too far from Coingecko's price.
-
-            Pyth price: {self.__state.price_aggregate}
-            Coingecko price: {self.__state.coingecko_price}
-            """
-        ).strip()
+        return {
+            "msg": f"{self.__state.symbol} is too far from Coingecko's price.",
+            "type": "PriceFeedCheck",
+            "symbol": self.__state.symbol,
+            "pyth_price": self.__state.price_aggregate,
+            "coingecko_price": self.__state.coingecko_price
+        }
 
 
 class PriceFeedConfidenceIntervalCheck(PriceFeedCheck):
@@ -159,14 +155,12 @@ class PriceFeedConfidenceIntervalCheck(PriceFeedCheck):
         return False
 
     def error_message(self) -> str:
-        return dedent(
-            f"""
-            {self.__state.symbol} confidence interval is too low.
-
-            Confidence interval: {self.__state.confidence_interval_aggregate}
-            """
-        ).strip()
-
+        return {
+            "msg": f"{self.__state.symbol} confidence interval is too low.",
+            "type": "PriceFeedCheck",
+            "symbol": self.__state.symbol,
+            "confidence_interval": self.__state.confidence_interval_aggregate
+        }
 
 class PriceFeedCrossChainOnlineCheck(PriceFeedCheck):
     def __init__(self, state: PriceFeedState, config: PriceFeedCheckConfig):
@@ -216,13 +210,12 @@ class PriceFeedCrossChainOnlineCheck(PriceFeedCheck):
         else:
             publish_time = arrow.get(0)
 
-        return dedent(
-            f"""
-            {self.__state.symbol} isn't online at the price service.
-
-            Last publish time: {publish_time.format('YYYY-MM-DD HH:mm:ss ZZ')}
-            """
-        ).strip()
+        return {
+            "msg": f"{self.__state.symbol} isn't online at the price service.",
+            "type": "PriceFeedCheck",
+            "symbol": self.__state.symbol,
+            "last_publish_time": publish_time.format('YYYY-MM-DD HH:mm:ss ZZ')
+        }
 
 
 class PriceFeedCrossChainDeviationCheck(PriceFeedCheck):
@@ -277,14 +270,13 @@ class PriceFeedCrossChainDeviationCheck(PriceFeedCheck):
             if self.__state.crosschain_price
             else None
         )
-        return dedent(
-            f"""
-            {self.__state.symbol} is too far at the price service.
-
-            Price: {self.__state.price_aggregate}
-            Price at price service: {price}
-            """
-        ).strip()
+        return {
+            "msg": f"{self.__state.symbol} is too far at the price service.",
+            "type": "PriceFeedCheck",
+            "symbol": self.__state.symbol,
+            "price": self.__state.price_aggregate,
+            "price_at_price_service": price
+        }
 
 
 PRICE_FEED_CHECKS = [

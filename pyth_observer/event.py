@@ -98,7 +98,7 @@ class LogEvent(Event):
         text = self.check.error_message()
 
         level = cast(LogEventLevel, os.environ.get("LOG_EVENT_LEVEL", "INFO"))
-        logger.log(level, text.replace("\n", ". "))
+        logger.log(level, text)
 
 
 class TelegramEvent(Event):
