@@ -30,3 +30,18 @@ Event types are configured via environment variables:
 
 - `LogEvent`
   - `LOG_EVENT_LEVEL` - Level to log messages at
+
+- `TelegramEvent`
+  - `TELEGRAM_BOT_TOKEN` - API token for the Telegram bot
+
+## Finding the Telegram Group Chat ID
+
+To integrate Telegram events with the Observer, you need the Telegram group chat ID. Here's how you can find it:
+
+1. Open [Telegram Web](https://web.telegram.org).
+2. Navigate to the group chat for which you need the ID.
+3. Look at the URL in the browser's address bar; it should look something like `https://web.telegram.org/a/#-1111111111`.
+4. The group chat ID is the number in the URL, including the `-` sign if present (e.g., `-1111111111`).
+
+Use this ID in the `publishers.yaml` configuration to correctly set up Telegram events.
+

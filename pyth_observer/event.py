@@ -105,6 +105,7 @@ class TelegramEvent(Event):
     def __init__(self, check: Check, context: Context):
         self.check = check
         self.context = context
+        self.telegram_bot_token = os.environ["TELEGRAM_BOT_TOKEN"]
 
     async def send(self):
         if self.check.__class__.__bases__ == (PublisherCheck,):
@@ -124,7 +125,9 @@ class TelegramEvent(Event):
                 )
                 return
 
-            telegram_api_url = f"https://api.telegram.org/bot{os.environ['TELEGRAM_BOT_TOKEN']}/sendMessage"
+            telegram_api_url = (
+                f"https://api.telegram.org/bot{self.telegram_bot_token}/sendMessage"
+            )
             message_data = {
                 "chat_id": chat_id,
                 "text": text,
