@@ -9,10 +9,12 @@ from pyth_observer.check.price_feed import PRICE_FEED_CHECKS, PriceFeedState
 from pyth_observer.check.publisher import PUBLISHER_CHECKS, PublisherState
 from pyth_observer.event import DatadogEvent  # Used dynamically
 from pyth_observer.event import LogEvent  # Used dynamically
+from pyth_observer.event import TelegramEvent  # Used dynamically
 from pyth_observer.event import Event
 
 assert DatadogEvent
 assert LogEvent
+assert TelegramEvent
 
 
 class Dispatch:

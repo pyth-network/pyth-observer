@@ -22,6 +22,7 @@ from pyth_observer.coingecko import Symbol, get_coingecko_prices
 from pyth_observer.crosschain import CrosschainPrice
 from pyth_observer.crosschain import CrosschainPriceObserver as Crosschain
 from pyth_observer.dispatch import Dispatch
+from pyth_observer.models import Publisher
 
 PYTHTEST_HTTP_ENDPOINT = "https://api.pythtest.pyth.network/"
 PYTHTEST_WS_ENDPOINT = "wss://api.pythtest.pyth.network/"
@@ -49,7 +50,7 @@ class Observer:
     def __init__(
         self,
         config: Dict[str, Any],
-        publishers: Dict[str, str],
+        publishers: Dict[str, Publisher],
         coingecko_mapping: Dict[str, Symbol],
     ):
         self.config = config
@@ -134,8 +135,9 @@ class Observer:
                     )
 
                     for component in price_account.price_components:
+                        pub = self.publishers.get(component.publisher_key.key, None)
                         publisher_name = (
-                            self.publishers.get(component.publisher_key.key, "")
+                            (pub.name if pub else "")
                             + f" ({component.publisher_key.key})"
                         ).strip()
                         states.append(

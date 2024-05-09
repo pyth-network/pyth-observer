@@ -1,4 +1,15 @@
-{
-  "publisher1": "66wJmrBqyykL7m4Erj4Ud29qhsm32DHSTo23zooupJrJ",
-  "publisher2": "3BkoB5MBSrrnDY7qe694UAuPpeMg7zJnodwbCnayNYzC",
-}
+- name: publisher1
+  key: "FR19oB2ePko2haah8yP4fhTycxitxkVQTxk3tssxX1Ce"
+  contact_info:
+    # Optional fields for contact information
+    telegram_chat_id: -4224704640
+    email:
+    slack_channel_id:
+
+- name: publisher2
+  key: "DgAK7fPveidN72LCwCF4QjFcYHchBZbtZnjEAtgU1bMX"
+  contact_info:
+    # Optional fields for contact information
+    telegram_chat_id: -4224704640
+    email:
+    slack_channel_id:

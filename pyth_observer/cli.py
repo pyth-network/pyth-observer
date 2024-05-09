@@ -7,7 +7,8 @@ import yaml
 from loguru import logger
 from prometheus_client import start_http_server
 
-from pyth_observer import Observer
+from pyth_observer import Observer, Publisher
+from pyth_observer.models import ContactInfo
 
 
 @click.command()
@@ -37,10 +38,26 @@ from pyth_observer import Observer
 )
 def run(config, publishers, coingecko_mapping, prometheus_port):
     config_ = yaml.safe_load(open(config, "r"))
-    publishers_ = yaml.safe_load(open(publishers, "r"))
-    publishers_inverted = {v: k for k, v in publishers_.items()}
+    # Load publishers YAML file and convert to dictionary of Publisher instances
+    publishers_raw = yaml.safe_load(open(publishers, "r"))
+    publishers_ = {
+        publisher["key"]: Publisher(
+            key=publisher["key"],
+            name=publisher["name"],
+            contact_info=(
+                ContactInfo(**publisher["contact_info"])
+                if "contact_info" in publisher
+                else None
+            ),
+        )
+        for publisher in publishers_raw
+    }
     coingecko_mapping_ = yaml.safe_load(open(coingecko_mapping, "r"))
-    observer = Observer(config_, publishers_inverted, coingecko_mapping_)
+    observer = Observer(
+        config_,
+        publishers_,
+        coingecko_mapping_,
+    )
 
     start_http_server(int(prometheus_port))
 
