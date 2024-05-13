@@ -39,7 +39,11 @@ class DatadogEvent(Event):
     async def send(self):
         # Publisher checks expect the key -> name mapping of publishers when
         # generating the error title/message.
-        event = self.check.error_message()
+        event_content = self.check.error_message()
+        event_title = event_content["msg"]
+        event_text = ""
+        for key, value in event_content:
+            event_text += f"{key}: {value}\n"
 
         # An example is: PriceFeedOfflineCheck-Crypto.AAVE/USD
         aggregation_key = f"{self.check.__class__.__name__}-{self.check.state().symbol}"
@@ -51,8 +55,8 @@ class DatadogEvent(Event):
 
         event = EventCreateRequest(
             aggregation_key=aggregation_key,
-            title=event["msg"],
-            text=json.dumps(event),
+            title=event_title,
+            text=event_text,
             tags=[
                 "service:observer",
                 f"network:{self.context['network']}",
