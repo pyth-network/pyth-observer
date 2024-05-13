@@ -41,7 +41,7 @@ class DatadogEvent(Event):
         event_content = self.check.error_message()
         event_title = event_content["msg"]
         event_text = ""
-        for key, value in event_content:
+        for key, value in event_content.items():
             event_text += f"{key}: {value}\n"
 
         # An example is: PriceFeedOfflineCheck-Crypto.AAVE/USD
