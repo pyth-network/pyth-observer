@@ -83,7 +83,7 @@ class PriceFeedOfflineCheck(PriceFeedCheck):
         distance = self.__state.latest_block_slot - self.__state.latest_trading_slot
         return {
             "msg": f"{self.__state.symbol} is offline (either non-trading/stale). Last update {distance} slots ago.",
-            "type": "PriceFeedCheck",
+            "type": "PriceFeedOfflineCheck",
             "symbol": self.__state.symbol,
             "latest_trading_slot": self.__state.latest_trading_slot,
             "block_slot": self.__state.latest_block_slot,
@@ -127,7 +127,7 @@ class PriceFeedCoinGeckoCheck(PriceFeedCheck):
     def error_message(self) -> dict:
         return {
             "msg": f"{self.__state.symbol} is too far from Coingecko's price.",
-            "type": "PriceFeedCheck",
+            "type": "PriceFeedCoinGeckoCheck",
             "symbol": self.__state.symbol,
             "pyth_price": self.__state.price_aggregate,
             "coingecko_price": self.__state.coingecko_price,
@@ -157,7 +157,7 @@ class PriceFeedConfidenceIntervalCheck(PriceFeedCheck):
     def error_message(self) -> dict:
         return {
             "msg": f"{self.__state.symbol} confidence interval is too low.",
-            "type": "PriceFeedCheck",
+            "type": "PriceFeedConfidenceIntervalCheck",
             "symbol": self.__state.symbol,
             "confidence_interval": self.__state.confidence_interval_aggregate,
         }
@@ -213,7 +213,7 @@ class PriceFeedCrossChainOnlineCheck(PriceFeedCheck):
 
         return {
             "msg": f"{self.__state.symbol} isn't online at the price service.",
-            "type": "PriceFeedCheck",
+            "type": "PriceFeedCrossChainOnlineCheck",
             "symbol": self.__state.symbol,
             "last_publish_time": publish_time.format("YYYY-MM-DD HH:mm:ss ZZ"),
         }
@@ -273,7 +273,7 @@ class PriceFeedCrossChainDeviationCheck(PriceFeedCheck):
         )
         return {
             "msg": f"{self.__state.symbol} is too far at the price service.",
-            "type": "PriceFeedCheck",
+            "type": "PriceFeedCrossChainDeviationCheck",
             "symbol": self.__state.symbol,
             "price": self.__state.price_aggregate,
             "price_at_price_service": price,

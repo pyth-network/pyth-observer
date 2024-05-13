@@ -82,7 +82,7 @@ class PublisherWithinAggregateConfidenceCheck(PublisherCheck):
         intervals_away = abs(diff / self.__state.confidence_interval_aggregate)
         return {
             "msg": f"{self.__state.publisher_name} price is {intervals_away} times away from confidence.",
-            "type": "PublisherCheck",
+            "type": "PublisherWithinAggregateConfidenceCheck",
             "publisher": self.__state.publisher_name,
             "symbol": self.__state.symbol,
             "publisher_price": f"{self.__state.price} ± {self.__state.confidence_interval}",
@@ -118,7 +118,7 @@ class PublisherConfidenceIntervalCheck(PublisherCheck):
     def error_message(self) -> dict:
         return {
             "msg": f"{self.__state.publisher_name} confidence interval is too tight.",
-            "type": "PublisherCheck",
+            "type": "PublisherConfidenceIntervalCheck",
             "publisher": self.__state.publisher_name,
             "symbol": self.__state.symbol,
             "price": self.__state.price,
@@ -153,7 +153,7 @@ class PublisherOfflineCheck(PublisherCheck):
         distance = self.__state.latest_block_slot - self.__state.slot
         return {
             "msg": f"{self.__state.publisher_name} hasn't published recently for {distance} slots.",
-            "type": "PublisherCheck",
+            "type": "PublisherOfflineCheck",
             "publisher": self.__state.publisher_name,
             "symbol": self.__state.symbol,
             "publisher_slot": self.__state.slot,
@@ -201,7 +201,7 @@ class PublisherPriceCheck(PublisherCheck):
         deviation = (self.ci_adjusted_price_diff() / self.__state.price_aggregate) * 100
         return {
             "msg": f"{self.__state.publisher_name} price is too far from aggregate price.",
-            "type": "PublisherCheck",
+            "type": "PublisherPriceCheck",
             "publisher": self.__state.publisher_name,
             "symbol": self.__state.symbol,
             "publisher_price": f"{self.__state.price} ± {self.__state.confidence_interval}",
