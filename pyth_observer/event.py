@@ -128,9 +128,17 @@ class TelegramEvent(Event):
             telegram_api_url = (
                 f"https://api.telegram.org/bot{self.telegram_bot_token}/sendMessage"
             )
+
+            formatted_message = ""
+            for key, value in text.items():
+                value_str = f"{value:.2f}%" if key == "deviation" else f"{value}"
+                formatted_message += (
+                    f"*{key.capitalize().replace('_', ' ')}:* {value_str}\n"
+                )
+
             message_data = {
                 "chat_id": chat_id,
-                "text": text,
+                "text": formatted_message,
                 "parse_mode": "Markdown",
             }
 
