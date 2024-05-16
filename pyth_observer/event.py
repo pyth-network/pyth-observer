@@ -128,9 +128,19 @@ class TelegramEvent(Event):
             telegram_api_url = (
                 f"https://api.telegram.org/bot{self.telegram_bot_token}/sendMessage"
             )
+
+            formatted_message = (
+                f"*Message:* {text['msg']}\n"
+                f"*Type:* {text['type']}\n"
+                f"*Publisher:* {text['publisher']}\n"
+                f"*Symbol:* {text['symbol']}\n"
+                f"*Publisher Price:* {text['publisher_price']}\n"
+                f"*Aggregate Price:* {text['aggregate_price']}\n"
+                f"*Deviation:* {text['deviation']:.2f}%"
+            )
             message_data = {
                 "chat_id": chat_id,
-                "text": text,
+                "text": formatted_message,
                 "parse_mode": "Markdown",
             }
 
