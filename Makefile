@@ -28,8 +28,11 @@ cover: ve
 lint: lint.python
 #lint: lint.yaml - argh, RHEL is too old to do this by default
 
-lint.python: ve
-	. ve/bin/activate; flake8 observer.py pyth_observer/
+lint.python:
+	poetry run isort pyth_observer/
+	poetry run black pyth_observer/
+	poetry run pyright pyth_observer/
+	poetry run pyflakes pyth_observer/
 
 lint.yaml:
 	yamllint .

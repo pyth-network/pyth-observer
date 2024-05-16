@@ -1,7 +1,11 @@
 import asyncio
+import json
+import os
 from copy import deepcopy
+from datetime import datetime, timedelta
 from typing import Any, Awaitable, Dict, List
 
+from loguru import logger
 from prometheus_client import Gauge
 
 from pyth_observer.check import Check, State
@@ -10,11 +14,14 @@ from pyth_observer.check.publisher import PUBLISHER_CHECKS, PublisherState
 from pyth_observer.event import DatadogEvent  # Used dynamically
 from pyth_observer.event import LogEvent  # Used dynamically
 from pyth_observer.event import TelegramEvent  # Used dynamically
+from pyth_observer.event import ZendutyEvent  # Used dynamically
 from pyth_observer.event import Event
+from pyth_observer.zenduty import send_zenduty_alert
 
 assert DatadogEvent
 assert LogEvent
 assert TelegramEvent
+assert ZendutyEvent
 
 
 class Dispatch:
@@ -36,6 +43,16 @@ class Dispatch:
             "Publisher check failure status",
             ["check", "symbol", "publisher"],
         )
+        if "ZendutyEvent" in self.config["events"]:
+            self.open_alerts_file = os.environ["OPEN_ALERTS_FILE"]
+            self.open_alerts = self.load_alerts()
+
+    def load_alerts(self):
+        try:
+            with open(self.open_alerts_file, "r") as file:
+                return json.load(file)
+        except FileNotFoundError:
+            return {}  # Return an empty dict if the file doesn't exist
 
     async def run(self, states: List[State]):
         # First, run each check and store the ones that failed
@@ -62,7 +79,40 @@ class Dispatch:
 
                 sent_events.append(event.send())
 
+                if event_type == "ZendutyEvent":
+                    # Add failed check to open alerts
+                    alert_identifier = (
+                        f"{check.__class__.__name__}-{check.state().symbol}"
+                    )
+                    state = check.state()
+                    if isinstance(state, PublisherState):
+                        alert_identifier += f"-{state.publisher_name}"
+                    self.open_alerts[alert_identifier] = datetime.now().isoformat()
+
         await asyncio.gather(*sent_events)
+
+        # Check open alerts and resolve those that are older than 5 minutes
+        if "ZendutyEvent" in self.config["events"]:
+
+            # Write open alerts to file to ensure persistence
+            with open(self.open_alerts_file, "w") as file:
+                json.dump(self.open_alerts, file)
+
+            to_remove = []
+            current_time = datetime.now()
+            for identifier, last_failure in self.open_alerts.items():
+                if current_time - datetime.fromisoformat(last_failure) >= timedelta(
+                    minutes=2
+                ):
+                    logger.debug(f"Resolving Zenduty alert {identifier}")
+                    response = await send_zenduty_alert(
+                        alert_identifier=identifier, message=identifier, resolved=True
+                    )
+                    if response and 200 <= response.status < 300:
+                        to_remove.append(identifier)
+
+            for identifier in to_remove:
+                del self.open_alerts[identifier]
 
     def check_price_feed(self, state: PriceFeedState) -> List[Check]:
         failed_checks: List[Check] = []
