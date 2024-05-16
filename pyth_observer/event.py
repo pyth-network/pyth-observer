@@ -129,15 +129,13 @@ class TelegramEvent(Event):
                 f"https://api.telegram.org/bot{self.telegram_bot_token}/sendMessage"
             )
 
-            formatted_message = (
-                f"*Message:* {text['msg']}\n"
-                f"*Type:* {text['type']}\n"
-                f"*Publisher:* {text['publisher']}\n"
-                f"*Symbol:* {text['symbol']}\n"
-                f"*Publisher Price:* {text['publisher_price']}\n"
-                f"*Aggregate Price:* {text['aggregate_price']}\n"
-                f"*Deviation:* {text['deviation']:.2f}%"
-            )
+            formatted_message = ""
+            for key, value in text.items():
+                value_str = f"{value:.2f}%" if key == "deviation" else f"{value}"
+                formatted_message += (
+                    f"*{key.capitalize().replace('_', ' ')}:* {value_str}\n"
+                )
+
             message_data = {
                 "chat_id": chat_id,
                 "text": formatted_message,
