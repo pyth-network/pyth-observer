@@ -91,7 +91,7 @@ class Dispatch:
 
         await asyncio.gather(*sent_events)
 
-        # Check open alerts and resolve those that are older than 3 minutes
+        # Check open alerts and resolve those that are older than 2 minutes
         if "ZendutyEvent" in self.config["events"]:
 
             # Write open alerts to file to ensure persistence
