@@ -94,10 +94,6 @@ class Dispatch:
         # Check open alerts and resolve those that are older than 2 minutes
         if "ZendutyEvent" in self.config["events"]:
 
-            # Write open alerts to file to ensure persistence
-            with open(self.open_alerts_file, "w") as file:
-                json.dump(self.open_alerts, file)
-
             to_remove = []
             current_time = datetime.now()
             for identifier, last_failure in self.open_alerts.items():
@@ -113,6 +109,10 @@ class Dispatch:
 
             for identifier in to_remove:
                 del self.open_alerts[identifier]
+
+            # Write open alerts to file to ensure persistence
+            with open(self.open_alerts_file, "w") as file:
+                json.dump(self.open_alerts, file)
 
     def check_price_feed(self, state: PriceFeedState) -> List[Check]:
         failed_checks: List[Check] = []

@@ -5,11 +5,11 @@ import os
 import aiohttp
 from loguru import logger
 
-url = f"https://www.zenduty.com/api/events/{os.environ['ZENDUTY_INTEGRATION_KEY']}/"
 headers = {"Content-Type": "application/json"}
 
 
 async def send_zenduty_alert(alert_identifier, message, resolved=False, summary=""):
+    url = f"https://www.zenduty.com/api/events/{os.environ['ZENDUTY_INTEGRATION_KEY']}/"
     # Use a hash of the alert_identifier as a unique id for the alert.
     # Take the first 32 characters due to length limit of the api.
     entity_id = hashlib.sha256(alert_identifier.encode("utf-8")).hexdigest()[:32]
@@ -36,7 +36,9 @@ async def send_zenduty_alert(alert_identifier, message, resolved=False, summary=
                         logger.error(
                             f"Received 429 Too Many Requests for {alert_identifier}. Retrying in 1 second..."
                         )
-                        await asyncio.sleep(1)  # Wait for 1 second before retrying
+                        await asyncio.sleep(
+                            min(30, 2 ^ retries)
+                        )  # Backoff before retrying, wait upto 30s
                     else:
                         logger.error(
                             f"Failed to send Zenduty event message for {alert_identifier} after {max_retries} retries."
