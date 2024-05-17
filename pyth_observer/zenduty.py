@@ -37,7 +37,7 @@ async def send_zenduty_alert(alert_identifier, message, resolved=False, summary=
                             f"Received 429 Too Many Requests for {alert_identifier}. Retrying in 1 second..."
                         )
                         await asyncio.sleep(
-                            min(30, 2 ^ retries)
+                            min(30, 2**retries)
                         )  # Backoff before retrying, wait upto 30s
                     else:
                         logger.error(
