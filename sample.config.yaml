@@ -54,3 +54,6 @@ checks:
   FX.USD/HKD:
     PriceFeedOfflineCheck:
       max_slot_distance: 10000
+  Crypto.BTC/USD:
+    PublisherStalledCheck:
+      stall_time_limit: 10
