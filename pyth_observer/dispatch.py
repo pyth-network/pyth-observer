@@ -124,6 +124,7 @@ class Dispatch:
 
             for identifier in to_remove:
                 del self.open_alerts[identifier]
+                del self.zenduty_events[identifier]
 
             # Write open alerts to file to ensure persistence
             with open(self.open_alerts_file, "w") as file:
