@@ -131,16 +131,7 @@ class TelegramEvent(Event):
 
             formatted_message = ""
             for key, value in text.items():
-                value_str = (
-                    f"{value:.2f}%"
-                    if key == "deviation"
-                    else f"{value} seconds"
-                    if key == "stall_duration"
-                    else f"{value:.2f}%"
-                )
-                formatted_message += (
-                    f"*{key.capitalize().replace('_', ' ')}:* {value_str}\n"
-                )
+                formatted_message += f"*{key.capitalize().replace('_', ' ')}:* {self.format_value(key, value)}\n"
 
             message_data = {
                 "chat_id": chat_id,
@@ -157,3 +148,11 @@ class TelegramEvent(Event):
                         logger.error(
                             f"Failed to send Telegram message: {response_text}"
                         )
+
+    def format_value(self, key: str, value: float) -> str:
+        if key == "deviation":
+            return f"{value:.2f}%"
+        elif key == "stall_duration":
+            return f"{value:.2f} seconds"
+        else:
+            return f"{value:.2f}"
