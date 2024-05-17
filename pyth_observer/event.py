@@ -11,8 +11,9 @@ from dotenv import load_dotenv
 from loguru import logger
 
 from pyth_observer.check import Check
-from pyth_observer.check.publisher import PublisherCheck
+from pyth_observer.check.publisher import PublisherCheck, PublisherState
 from pyth_observer.models import Publisher
+from pyth_observer.zenduty import send_zenduty_alert
 
 load_dotenv()
 
@@ -151,3 +152,27 @@ class TelegramEvent(Event):
                         logger.error(
                             f"Failed to send Telegram message: {response_text}"
                         )
+
+
+class ZendutyEvent(Event):
+    def __init__(self, check: Check, context: Context):
+        self.check = check
+        self.context = context
+
+    async def send(self):
+        event_details = self.check.error_message()
+        summary = ""
+        for key, value in event_details.items():
+            summary += f"{key}: {value}\n"
+
+        alert_identifier = (
+            f"{self.check.__class__.__name__}-{self.check.state().symbol}"
+        )
+        state = self.check.state()
+        if isinstance(state, PublisherState):
+            alert_identifier += f"-{state.publisher_name}"
+
+        logger.debug(f"Sending Zenduty alert for {alert_identifier}")
+        await send_zenduty_alert(
+            alert_identifier=alert_identifier, message=alert_identifier, summary=summary
+        )
