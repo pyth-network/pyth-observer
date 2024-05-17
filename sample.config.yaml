@@ -44,6 +44,9 @@ checks:
       enable: true
       max_slot_distance: 25
       max_aggregate_distance: 6
+    PublisherStalledCheck:
+      enable: true
+      stall_time_limit: 60
   # Per-symbol config
   Crypto.MNGO/USD:
     PriceFeedOfflineCheck:
