@@ -56,4 +56,4 @@ checks:
       max_slot_distance: 10000
   Crypto.BTC/USD:
     PublisherStalledCheck:
-      stall_time_limit: 10
+      stall_time_limit: 10 # This will override the global stall_time_limit for Crypto.BTC/USD
