@@ -14,8 +14,7 @@ from pyth_observer.check.publisher import PUBLISHER_CHECKS, PublisherState
 from pyth_observer.event import DatadogEvent  # Used dynamically
 from pyth_observer.event import LogEvent  # Used dynamically
 from pyth_observer.event import TelegramEvent  # Used dynamically
-from pyth_observer.event import ZendutyEvent  # Used dynamically
-from pyth_observer.event import Event
+from pyth_observer.event import Context, Event, ZendutyEvent
 from pyth_observer.zenduty import send_zenduty_alert
 
 assert DatadogEvent
@@ -46,6 +45,9 @@ class Dispatch:
         if "ZendutyEvent" in self.config["events"]:
             self.open_alerts_file = os.environ["OPEN_ALERTS_FILE"]
             self.open_alerts = self.load_alerts()
+            # below is used to store events to later send if mutilple failures occur
+            # events cannot be stored in open_alerts as they are not JSON serializable.
+            self.zenduty_events = {}
 
     def load_alerts(self):
         try:
@@ -68,16 +70,13 @@ class Dispatch:
 
         # Then, wrap each failed check in events and send them
         sent_events: List[Awaitable] = []
-        context = {
-            "network": self.config["network"]["name"],
-            "publishers": self.publishers,
-        }
+        context = Context(
+            network=self.config["network"]["name"], publishers=self.publishers
+        )
 
         for check in failed_checks:
             for event_type in self.config["events"]:
                 event: Event = globals()[event_type](check, context)
-
-                sent_events.append(event.send())
 
                 if event_type == "ZendutyEvent":
                     # Add failed check to open alerts
@@ -87,25 +86,41 @@ class Dispatch:
                     state = check.state()
                     if isinstance(state, PublisherState):
                         alert_identifier += f"-{state.publisher_name}"
-                    self.open_alerts[alert_identifier] = datetime.now().isoformat()
+                    try:
+                        failures = self.open_alerts[alert_identifier]["failures"] + 1
+                    except KeyError:
+                        failures = 1
+                    self.open_alerts[alert_identifier] = {
+                        "last_failure": datetime.now().isoformat(),
+                        "failures": failures,
+                    }
+                    # store the event to send it later if it fails multiple times
+                    self.zenduty_events[alert_identifier] = event
+                    continue  # do not immediately send a zenduty alert
+
+                sent_events.append(event.send())
 
         await asyncio.gather(*sent_events)
 
-        # Check open alerts and resolve those that are older than 2 minutes
+        # Check open alerts for zenduty
         if "ZendutyEvent" in self.config["events"]:
 
             to_remove = []
             current_time = datetime.now()
-            for identifier, last_failure in self.open_alerts.items():
-                if current_time - datetime.fromisoformat(last_failure) >= timedelta(
-                    minutes=2
-                ):
+            for identifier, info in self.open_alerts.items():
+                # Resolve the alert if it last failed > 5 minutes ago
+                if current_time - datetime.fromisoformat(
+                    info["last_failure"]
+                ) >= timedelta(minutes=5):
                     logger.debug(f"Resolving Zenduty alert {identifier}")
                     response = await send_zenduty_alert(
                         alert_identifier=identifier, message=identifier, resolved=True
                     )
                     if response and 200 <= response.status < 300:
                         to_remove.append(identifier)
+                elif info["failures"] > 2:
+                    # Raise alert if the check has failed more than once without self-resolving
+                    await self.zenduty_events[identifier].send()
 
             for identifier in to_remove:
                 del self.open_alerts[identifier]
