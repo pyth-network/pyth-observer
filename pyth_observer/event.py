@@ -131,7 +131,13 @@ class TelegramEvent(Event):
 
             formatted_message = ""
             for key, value in text.items():
-                value_str = f"{value:.2f}%" if key == "deviation" else f"{value}"
+                value_str = (
+                    f"{value:.2f}%"
+                    if key == "deviation"
+                    else f"{value} seconds"
+                    if key == "stall_duration"
+                    else f"{value:.2f}%"
+                )
                 formatted_message += (
                     f"*{key.capitalize().replace('_', ' ')}:* {value_str}\n"
                 )
