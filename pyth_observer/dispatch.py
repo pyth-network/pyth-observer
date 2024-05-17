@@ -108,10 +108,10 @@ class Dispatch:
             to_remove = []
             current_time = datetime.now()
             for identifier, info in self.open_alerts.items():
-                # Resolve the alert if it last failed > 5 minutes ago
+                # Resolve the alert if it last failed > 2 minutes ago
                 if current_time - datetime.fromisoformat(
                     info["last_failure"]
-                ) >= timedelta(minutes=5):
+                ) >= timedelta(minutes=2):
                     logger.debug(f"Resolving Zenduty alert {identifier}")
                     response = await send_zenduty_alert(
                         alert_identifier=identifier, message=identifier, resolved=True
