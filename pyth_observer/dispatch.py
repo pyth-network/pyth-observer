@@ -119,7 +119,7 @@ class Dispatch:
                     if response and 200 <= response.status < 300:
                         to_remove.append(identifier)
                 elif info["failures"] > 2:
-                    # Raise alert if the check has failed more than once without self-resolving
+                    # Raise alert if the check has failed more than twice before self-resolving
                     await self.zenduty_events[identifier].send()
 
             for identifier in to_remove:
