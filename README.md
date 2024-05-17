@@ -34,6 +34,10 @@ Event types are configured via environment variables:
 - `TelegramEvent`
   - `TELEGRAM_BOT_TOKEN` - API token for the Telegram bot
 
+- `ZendutyEvent`
+  - `ZENDUTY_INTEGRATION_KEY` - Integration key for Zenduty service API integration
+  - `OPEN_ALERTS_FILE` - Path to local file used for persisting open alerts
+
 ## Finding the Telegram Group Chat ID
 
 To integrate Telegram events with the Observer, you need the Telegram group chat ID. Here's how you can find it:
