@@ -1,3 +1,4 @@
+import time
 from dataclasses import dataclass
 from typing import Dict, Protocol, runtime_checkable
 
@@ -5,6 +6,8 @@ from pythclient.pythaccounts import PythPriceStatus
 from pythclient.solana import SolanaPublicKey
 
 PUBLISHER_EXCLUSION_DISTANCE = 25
+
+PUBLISHER_CACHE = {}
 
 
 @dataclass
@@ -216,9 +219,48 @@ class PublisherPriceCheck(PublisherCheck):
         return max(price_only_diff - self.__state.confidence_interval, 0)
 
 
+class PublisherStalledCheck(PublisherCheck):
+    def __init__(self, state: PublisherState, config: PublisherCheckConfig):
+        self.__state = state
+        self.__stall_time_limit: int = int(
+            config["stall_time_limit"]
+        )  # Time in seconds
+
+    def state(self) -> PublisherState:
+        return self.__state
+
+    def run(self) -> bool:
+        publisher_key = (self.__state.publisher_name, self.__state.symbol)
+        current_time = time.time()
+        previous_price, last_change_time = PUBLISHER_CACHE.get(
+            publisher_key, (None, None)
+        )
+
+        if previous_price is None or self.__state.price != previous_price:
+            PUBLISHER_CACHE[publisher_key] = (self.__state.price, current_time)
+            return True
+
+        if (current_time - last_change_time) > self.__stall_time_limit:
+            return False
+
+        return True
+
+    def error_message(self) -> dict:
+        return {
+            "msg": f"{self.__state.publisher_name} has been publishing the same price for too long.",
+            "type": "PublisherStalledCheck",
+            "publisher": self.__state.publisher_name,
+            "symbol": self.__state.symbol,
+            "price": self.__state.price,
+            "stall_duration": time.time()
+            - PUBLISHER_CACHE[(self.__state.publisher_name, self.__state.symbol)][1],
+        }
+
+
 PUBLISHER_CHECKS = [
     PublisherWithinAggregateConfidenceCheck,
     PublisherConfidenceIntervalCheck,
     PublisherOfflineCheck,
     PublisherPriceCheck,
+    PublisherStalledCheck,
 ]
