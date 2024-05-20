@@ -23,6 +23,7 @@ def make_state(
     return PublisherState(
         publisher_name="publisher",
         symbol="Crypto.BTC/USD",
+        asset_type="Crypto",
         public_key=SolanaPublicKey("2hgu6Umyokvo8FfSDdMa9nDKhcdv9Q4VvGNhRCeSWeD3"),
         status=PythPriceStatus.TRADING,
         aggregate_status=PythPriceStatus.TRADING,

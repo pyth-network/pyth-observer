@@ -1,7 +1,10 @@
 import time
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Dict, Protocol, runtime_checkable
+from zoneinfo import ZoneInfo
 
+from pythclient.calendar import is_market_open
 from pythclient.pythaccounts import PythPriceStatus
 from pythclient.solana import SolanaPublicKey
 
@@ -14,6 +17,7 @@ PUBLISHER_CACHE = {}
 class PublisherState:
     publisher_name: str
     symbol: str
+    asset_type: str
     public_key: SolanaPublicKey
     status: PythPriceStatus
     aggregate_status: PythPriceStatus
@@ -139,6 +143,14 @@ class PublisherOfflineCheck(PublisherCheck):
         return self.__state
 
     def run(self) -> bool:
+        market_open = is_market_open(
+            self.__state.asset_type.lower(),
+            datetime.now(ZoneInfo("America/New_York")),
+        )
+
+        if not market_open:
+            return True
+
         distance = self.__state.latest_block_slot - self.__state.slot
 
         # Pass if publisher slot is not too far from aggregate slot
@@ -225,11 +237,26 @@ class PublisherStalledCheck(PublisherCheck):
         self.__stall_time_limit: int = int(
             config["stall_time_limit"]
         )  # Time in seconds
+        self.__max_slot_distance: int = int(config["max_slot_distance"])
 
     def state(self) -> PublisherState:
         return self.__state
 
     def run(self) -> bool:
+        market_open = is_market_open(
+            self.__state.asset_type.lower(),
+            datetime.now(ZoneInfo("America/New_York")),
+        )
+
+        if not market_open:
+            return True
+
+        distance = self.__state.latest_block_slot - self.__state.slot
+
+        #  Pass when publisher is offline because PublisherOfflineCheck will be triggered
+        if distance >= self.__max_slot_distance:
+            return True
+
         publisher_key = (self.__state.publisher_name, self.__state.symbol)
         current_time = time.time()
         previous_price, last_change_time = PUBLISHER_CACHE.get(
