@@ -144,6 +144,7 @@ class Observer:
                             PublisherState(
                                 publisher_name=publisher_name,
                                 symbol=product.attrs["symbol"],
+                                asset_type=product.attrs["asset_type"],
                                 public_key=component.publisher_key,
                                 confidence_interval=component.latest_price_info.confidence_interval,
                                 confidence_interval_aggregate=price_account.aggregate_price_info.confidence_interval,
