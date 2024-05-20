@@ -63,8 +63,14 @@ def test_publisher_stalled_check():
         current_time += seconds
         return current_time
 
-    def setup_check(state, stall_time_limit):
-        check = PublisherStalledCheck(state, {"stall_time_limit": stall_time_limit})
+    def setup_check(state, stall_time_limit, max_slot_distance):
+        check = PublisherStalledCheck(
+            state,
+            {
+                "stall_time_limit": stall_time_limit,
+                "max_slot_distance": max_slot_distance,
+            },
+        )
         PUBLISHER_CACHE[(state.publisher_name, state.symbol)] = (
             state.price,
             current_time,
@@ -77,17 +83,17 @@ def test_publisher_stalled_check():
 
     PUBLISHER_CACHE.clear()
     state_a = make_state(1, 100.0, 2.0, 1, 100.0, 1.0)
-    check_a = setup_check(state_a, 5)
+    check_a = setup_check(state_a, 5, 25)
     run_check(check_a, 5, True)  # Should pass as it hits the limit exactly
 
     PUBLISHER_CACHE.clear()
     state_b = make_state(1, 100.0, 2.0, 1, 100.0, 1.0)
-    check_b = setup_check(state_b, 5)
+    check_b = setup_check(state_b, 5, 25)
     run_check(check_b, 6, False)  # Should fail as it exceeds the limit
 
     PUBLISHER_CACHE.clear()
     state_c = make_state(1, 100.0, 2.0, 1, 100.0, 1.0)
-    check_c = setup_check(state_c, 5)
+    check_c = setup_check(state_c, 5, 25)
     run_check(check_c, 2, True)  # Initial check should pass
     state_c.price = 105.0  # Change the price
     run_check(check_c, 3, True)  # Should pass as price changes
@@ -96,3 +102,11 @@ def test_publisher_stalled_check():
     run_check(
         check_c, 8, False
     )  # Should fail as price stalls for too long after last change
+
+    # Adding a check for when the publisher is offline
+    PUBLISHER_CACHE.clear()
+    state_d = make_state(1, 100.0, 2.0, 1, 100.0, 1.0)
+    state_d.latest_block_slot = 25
+    state_d.slot = 0
+    check_d = setup_check(state_d, 5, 25)
+    run_check(check_d, 10, True)  # Should pass as the publisher is offline
