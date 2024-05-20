@@ -173,7 +173,7 @@ class Dispatch:
         to_alert = []
 
         for identifier, info in self.open_alerts.items():
-            self.check_zd_alert_status(self, identifier, current_time)
+            self.check_zd_alert_status(identifier, current_time)
             # Resolve the alert if raised and failed < 5 times in the last 5m window
             if (
                 info["sent"]
