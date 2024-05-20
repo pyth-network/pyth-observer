@@ -24,7 +24,7 @@ async def send_zenduty_alert(alert_identifier, message, resolved=False, summary=
     }
 
     async with aiohttp.ClientSession() as session:
-        max_retries = 30
+        max_retries = 5
         retries = 0
         while retries < max_retries:
             async with session.post(url, json=data, headers=headers) as response:

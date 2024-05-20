@@ -74,61 +74,21 @@ class Dispatch:
             network=self.config["network"]["name"], publishers=self.publishers
         )
 
+        current_time = datetime.now()
         for check in failed_checks:
             for event_type in self.config["events"]:
                 event: Event = globals()[event_type](check, context)
 
                 if event_type == "ZendutyEvent":
-                    # Add failed check to open alerts
-                    alert_identifier = (
-                        f"{check.__class__.__name__}-{check.state().symbol}"
-                    )
-                    state = check.state()
-                    if isinstance(state, PublisherState):
-                        alert_identifier += f"-{state.publisher_name}"
-                    try:
-                        failures = self.open_alerts[alert_identifier]["failures"] + 1
-                    except KeyError:
-                        failures = 1
-                    self.open_alerts[alert_identifier] = {
-                        "last_failure": datetime.now().isoformat(),
-                        "failures": failures,
-                    }
-                    # store the event to send it later if it fails multiple times
+                    alert_identifier = self.generate_alert_identifier(check)
+                    self.update_zd_alert_status(alert_identifier, current_time)
                     self.zenduty_events[alert_identifier] = event
-                    continue  # do not immediately send a zenduty alert
+                    continue  # Skip sending immediately for ZendutyEvent
 
                 sent_events.append(event.send())
 
         await asyncio.gather(*sent_events)
-
-        # Check open alerts for zenduty
-        if "ZendutyEvent" in self.config["events"]:
-
-            to_remove = []
-            current_time = datetime.now()
-            for identifier, info in self.open_alerts.items():
-                # Resolve the alert if it last failed > 2 minutes ago
-                if current_time - datetime.fromisoformat(
-                    info["last_failure"]
-                ) >= timedelta(minutes=2):
-                    logger.debug(f"Resolving Zenduty alert {identifier}")
-                    response = await send_zenduty_alert(
-                        alert_identifier=identifier, message=identifier, resolved=True
-                    )
-                    if response and 200 <= response.status < 300:
-                        to_remove.append(identifier)
-                elif info["failures"] > 2:
-                    # Raise alert if the check has failed more than twice before self-resolving
-                    await self.zenduty_events[identifier].send()
-
-            for identifier in to_remove:
-                del self.open_alerts[identifier]
-                del self.zenduty_events[identifier]
-
-            # Write open alerts to file to ensure persistence
-            with open(self.open_alerts_file, "w") as file:
-                json.dump(self.open_alerts, file)
+        await self.process_zenduty_events(current_time)
 
     def check_price_feed(self, state: PriceFeedState) -> List[Check]:
         failed_checks: List[Check] = []
@@ -179,3 +139,65 @@ class Dispatch:
                 config |= self.config["checks"][symbol][check_name]
 
         return config
+
+    # Zenduty Functions
+    def generate_alert_identifier(self, check):
+        alert_identifier = f"{check.__class__.__name__}-{check.state().symbol}"
+        state = check.state()
+        if isinstance(state, PublisherState):
+            alert_identifier += f"-{state.publisher_name}"
+        return alert_identifier
+
+    def update_zd_alert_status(self, alert_identifier, current_time):
+        alert = self.open_alerts.get(alert_identifier)
+        if alert is None:
+            self.open_alerts[alert_identifier] = {
+                "window_start": current_time.isoformat(),
+                "failures": 1,
+                "last_window_failures": 0,
+                "sent": False,
+            }
+        else:
+            alert["failures"] += 1
+            # Reset the count if 5m has elapsed
+            if current_time - datetime.fromisoformat(
+                alert["window_start"]
+            ) >= timedelta(minutes=5):
+                alert["window_start"] = current_time.isoformat()
+                alert["last_window_failures"] = alert["failures"]
+                alert["failures"] = 1
+
+    async def process_zenduty_events(self, current_time):
+        to_remove = []
+        to_alert = []
+
+        for identifier, info in self.open_alerts.items():
+            # Resolve the alert if raised and failed < 5 times in the last 5m window
+            if info["sent"] and 0 < info["last_window_failures"] < 5:
+                logger.debug(f"Resolving Zenduty alert {identifier}")
+                response = await send_zenduty_alert(
+                    identifier, identifier, resolved=True
+                )
+                if response and 200 <= response.status < 300:
+                    to_remove.append(identifier)
+            # Raise alert if failed > 5 times within the last 5m window
+            # re-alert every 5 minutes
+            elif info["failures"] >= 5 and (
+                not info.get("last_alert")
+                or current_time - datetime.fromisoformat(info["last_alert"])
+                > timedelta(minutes=5)
+            ):
+                logger.debug(f"Raising Zenduty alert {identifier}")
+                self.open_alerts[identifier]["sent"] = True
+                self.open_alerts[identifier]["last_alert"] = current_time.isoformat()
+                to_alert.append(self.zenduty_events[identifier].send())
+
+        await asyncio.gather(*to_alert)
+        for identifier in to_remove:
+            if self.open_alerts.get(identifier):
+                del self.open_alerts[identifier]
+            if self.zenduty_events.get(identifier):
+                del self.zenduty_events[identifier]
+
+        with open(self.open_alerts_file, "w") as file:
+            json.dump(self.open_alerts, file)
