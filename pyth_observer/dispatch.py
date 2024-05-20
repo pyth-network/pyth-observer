@@ -81,7 +81,16 @@ class Dispatch:
 
                 if event_type == "ZendutyEvent":
                     alert_identifier = self.generate_alert_identifier(check)
-                    self.update_zd_alert_status(alert_identifier, current_time)
+                    alert = self.open_alerts.get(alert_identifier)
+                    if alert is None:
+                        self.open_alerts[alert_identifier] = {
+                            "window_start": current_time.isoformat(),
+                            "failures": 1,
+                            "last_window_failures": None,
+                            "sent": False,
+                        }
+                    else:
+                        alert["failures"] += 1
                     self.zenduty_events[alert_identifier] = event
                     continue  # Skip sending immediately for ZendutyEvent
 
@@ -148,30 +157,23 @@ class Dispatch:
             alert_identifier += f"-{state.publisher_name}"
         return alert_identifier
 
-    def update_zd_alert_status(self, alert_identifier, current_time):
+    def check_zd_alert_status(self, alert_identifier, current_time):
         alert = self.open_alerts.get(alert_identifier)
-        if alert is None:
-            self.open_alerts[alert_identifier] = {
-                "window_start": current_time.isoformat(),
-                "failures": 1,
-                "last_window_failures": None,
-                "sent": False,
-            }
-        else:
-            alert["failures"] += 1
-            # Reset the count if 5m has elapsed
+        if alert is not None:
+            # Reset the failure count if 5m has elapsed
             if current_time - datetime.fromisoformat(
                 alert["window_start"]
             ) >= timedelta(minutes=5):
                 alert["window_start"] = current_time.isoformat()
                 alert["last_window_failures"] = alert["failures"]
-                alert["failures"] = 1
+                alert["failures"] = 0
 
     async def process_zenduty_events(self, current_time):
         to_remove = []
         to_alert = []
 
         for identifier, info in self.open_alerts.items():
+            self.check_zd_alert_status(self, identifier, current_time)
             # Resolve the alert if raised and failed < 5 times in the last 5m window
             if (
                 info["sent"]
