@@ -154,7 +154,7 @@ class Dispatch:
             self.open_alerts[alert_identifier] = {
                 "window_start": current_time.isoformat(),
                 "failures": 1,
-                "last_window_failures": 0,
+                "last_window_failures": None,
                 "sent": False,
             }
         else:
@@ -173,7 +173,11 @@ class Dispatch:
 
         for identifier, info in self.open_alerts.items():
             # Resolve the alert if raised and failed < 5 times in the last 5m window
-            if info["sent"] and 0 < info["last_window_failures"] < 5:
+            if (
+                info["sent"]
+                and info["last_window_failures"] is not None
+                and info["last_window_failures"] < 5
+            ):
                 logger.debug(f"Resolving Zenduty alert {identifier}")
                 response = await send_zenduty_alert(
                     identifier, identifier, resolved=True
