@@ -132,9 +132,8 @@ class TelegramEvent(Event):
 
             formatted_message = ""
             for key, value in text.items():
-                value_str = f"{value:.2f}%" if key == "deviation" else f"{value}"
                 formatted_message += (
-                    f"*{key.capitalize().replace('_', ' ')}:* {value_str}\n"
+                    f"*{key.capitalize().replace('_', ' ')}:* {value}\n"
                 )
 
             message_data = {
