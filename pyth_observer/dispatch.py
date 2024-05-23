@@ -97,7 +97,8 @@ class Dispatch:
                 sent_events.append(event.send())
 
         await asyncio.gather(*sent_events)
-        await self.process_zenduty_events(current_time)
+        if "ZendutyEvent" in self.config["events"]:
+            await self.process_zenduty_events(current_time)
 
     def check_price_feed(self, state: PriceFeedState) -> List[Check]:
         failed_checks: List[Check] = []

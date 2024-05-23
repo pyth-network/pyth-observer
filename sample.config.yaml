@@ -10,7 +10,7 @@ events:
   # NOTE: Uncomment to enable Datadog metrics, see README.md for datadog credential docs.
   # - DatadogEvent
   - LogEvent
-  - TelegramEvent
+  # - TelegramEvent
 checks:
   global:
     # Price feed checks
@@ -45,8 +45,9 @@ checks:
       max_slot_distance: 25
       max_aggregate_distance: 6
     PublisherStalledCheck:
-      enable: true
-      stall_time_limit: 60
+      enable: false
+      stall_time_limit: 30
+      abandoned_time_limit: 600
       max_slot_distance: 25
   # Per-symbol config
   Crypto.MNGO/USD:
@@ -57,4 +58,5 @@ checks:
       max_slot_distance: 10000
   Crypto.BTC/USD:
     PublisherStalledCheck:
-      stall_time_limit: 10 # This will override the global stall_time_limit for Crypto.BTC/USD
+      enable: true
+      stall_time_limit: 60

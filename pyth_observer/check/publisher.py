@@ -221,7 +221,7 @@ class PublisherPriceCheck(PublisherCheck):
             "symbol": self.__state.symbol,
             "publisher_price": f"{self.__state.price} ± {self.__state.confidence_interval}",
             "aggregate_price": f"{self.__state.price_aggregate} ± {self.__state.confidence_interval_aggregate}",
-            "deviation": deviation,
+            "deviation": f"{deviation:.2f}%",
         }
 
     # Returns the distance between the aggregate price and the closest side of the publisher's confidence interval
@@ -237,6 +237,7 @@ class PublisherStalledCheck(PublisherCheck):
         self.__stall_time_limit: int = int(
             config["stall_time_limit"]
         )  # Time in seconds
+        self.__abandoned_time_limit: int = int(config["abandoned_time_limit"])
         self.__max_slot_distance: int = int(config["max_slot_distance"])
 
     def state(self) -> PublisherState:
@@ -258,7 +259,7 @@ class PublisherStalledCheck(PublisherCheck):
             return True
 
         publisher_key = (self.__state.publisher_name, self.__state.symbol)
-        current_time = time.time()
+        current_time = int(time.time())
         previous_price, last_change_time = PUBLISHER_CACHE.get(
             publisher_key, (None, None)
         )
@@ -267,7 +268,10 @@ class PublisherStalledCheck(PublisherCheck):
             PUBLISHER_CACHE[publisher_key] = (self.__state.price, current_time)
             return True
 
-        if (current_time - last_change_time) > self.__stall_time_limit:
+        time_since_last_change = current_time - last_change_time
+        if time_since_last_change > self.__stall_time_limit:
+            if time_since_last_change > self.__abandoned_time_limit:
+                return True  # Abandon this check after the abandoned time limit
             return False
 
         return True
@@ -279,8 +283,7 @@ class PublisherStalledCheck(PublisherCheck):
             "publisher": self.__state.publisher_name,
             "symbol": self.__state.symbol,
             "price": self.__state.price,
-            "stall_duration": time.time()
-            - PUBLISHER_CACHE[(self.__state.publisher_name, self.__state.symbol)][1],
+            "stall_duration": f"{int(time.time()) - PUBLISHER_CACHE[(self.__state.publisher_name, self.__state.symbol)][1]} seconds",
         }
 
 
