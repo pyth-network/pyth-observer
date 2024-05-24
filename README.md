@@ -44,8 +44,8 @@ By default:
 - The alert will be resolved if the check failed < 4 times within 5 minutes.
 - Checks run approximately once per minute.
 - These thresholds can be overridden per check type in config.yaml
-  - `zenduty_alert_threshold`: number of failures in 5 minutes >= to this value trigger an alert
-  - `zenduty_resolution_threshold`: number of failures in 5 minutes <= this value resolve the alert
+  - `zenduty_alert_threshold`: number of failures in 5 minutes >= to this value trigger an alert (default: 5)
+  - `zenduty_resolution_threshold`: number of failures in 5 minutes <= this value resolve the alert (default: 3)
 
 ## Finding the Telegram Group Chat ID
 
