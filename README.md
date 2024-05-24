@@ -4,7 +4,7 @@ Observe Pyth on-chain price feeds and run sanity checks on the data.
 
 ## Usage
 
-Container images are available at https://gallery.ecr.aws/pyth-network/observer.
+Container images are available at https://github.com/pyth-network/pyth-observer/pkgs/container/pyth-observer
 
 To run Observer locally, make sure you have a recent version of [Poetry](https://python-poetry.org) installed and run:
 
@@ -37,6 +37,14 @@ Event types are configured via environment variables:
 - `ZendutyEvent`
   - `ZENDUTY_INTEGRATION_KEY` - Integration key for Zenduty service API integration
   - `OPEN_ALERTS_FILE` - Path to local file used for persisting open alerts
+
+### Zenduty Alert Thresholds
+- Zenduty alert will fire if a check fails 5 or more times within 5 minutes.
+- The alert will be resolved if the check failed < 4 times within 5 minutes.
+- Checks run approximately once per minute.
+- These thresholds can be overridden per check type in config.yaml
+  - `zenduty_alert_threshold`: number of failures in 5 minutes >= to this value trigger an alert (default: 5)
+  - `zenduty_resolution_threshold`: number of failures in 5 minutes <= this value resolve the alert (default: 3)
 
 ## Finding the Telegram Group Chat ID
 

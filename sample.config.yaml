@@ -11,6 +11,7 @@ events:
   # - DatadogEvent
   - LogEvent
   # - TelegramEvent
+  - ZendutyEvent
 checks:
   global:
     # Price feed checks
@@ -18,6 +19,8 @@ checks:
       enable: true
       max_slot_distance: 25
       abandoned_slot_distance: 100000
+      zenduty_alert_threshold: 3
+      zenduty_resolution_threshold: 0
     PriceFeedCoinGeckoCheck:
       enable: true
       max_deviation: 5
@@ -44,11 +47,15 @@ checks:
       enable: true
       max_slot_distance: 25
       max_aggregate_distance: 6
+      zenduty_alert_threshold: 5
+      zenduty_resolution_threshold: 2
     PublisherStalledCheck:
       enable: false
       stall_time_limit: 30
       abandoned_time_limit: 600
       max_slot_distance: 25
+      zenduty_alert_threshold: 1
+      zenduty_resolution_threshold: 0
   # Per-symbol config
   Crypto.MNGO/USD:
     PriceFeedOfflineCheck:
