@@ -186,6 +186,7 @@ class Dispatch:
                 and info["last_window_failures"] <= resolution_threshold
             ):
                 logger.debug(f"Resolving Zenduty alert {identifier}")
+                resolved = True
                 if info["sent"]:
                     response = await send_zenduty_alert(
                         identifier, identifier, resolved=True
