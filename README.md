@@ -38,6 +38,15 @@ Event types are configured via environment variables:
   - `ZENDUTY_INTEGRATION_KEY` - Integration key for Zenduty service API integration
   - `OPEN_ALERTS_FILE` - Path to local file used for persisting open alerts
 
+### Zenduty Alert Thresholds
+By default: 
+- Zenduty alert will fire if a check fails 5 or more times within 5 minutes.
+- The alert will be resolved if the check failed < 4 times within 5 minutes.
+- Checks run approximately once per minute.
+- These thresholds can be overridden per check type in config.yaml
+  - `zenduty_alert_threshold`: number of failures in 5 minutes >= to this value trigger an alert
+  - `zenduty_resolution_threshold`: number of failures in 5 minutes <= this value resolve the alert
+
 ## Finding the Telegram Group Chat ID
 
 To integrate Telegram events with the Observer, you need the Telegram group chat ID. Here's how you can find it:

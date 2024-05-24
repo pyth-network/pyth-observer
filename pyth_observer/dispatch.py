@@ -84,6 +84,7 @@ class Dispatch:
                     alert = self.open_alerts.get(alert_identifier)
                     if alert is None:
                         self.open_alerts[alert_identifier] = {
+                            "type": check.__class__.__name__,
                             "window_start": current_time.isoformat(),
                             "failures": 1,
                             "last_window_failures": None,
@@ -175,21 +176,30 @@ class Dispatch:
 
         for identifier, info in self.open_alerts.items():
             self.check_zd_alert_status(identifier, current_time)
-            # Resolve the alert if raised and failed < 5 times in the last 5m window
+            check_config = self.config["checks"]["global"][info["type"]]
+            alert_threshold = check_config.get("zenduty_alert_threshold", 5)
+            resolution_threshold = check_config.get("zenduty_resolution_threshold", 3)
+            # Resolve the alert if raised and failed < $threshold times in the last 5m window
+            resolved = False
             if (
-                info["sent"]
-                and info["last_window_failures"] is not None
-                and info["last_window_failures"] < 5
+                info["last_window_failures"] is not None
+                and info["last_window_failures"] <= resolution_threshold
             ):
                 logger.debug(f"Resolving Zenduty alert {identifier}")
-                response = await send_zenduty_alert(
-                    identifier, identifier, resolved=True
-                )
-                if response and 200 <= response.status < 300:
+                if info["sent"]:
+                    response = await send_zenduty_alert(
+                        identifier, identifier, resolved=True
+                    )
+                    if response and 200 <= response.status < 300:
+                        to_remove.append(identifier)
+                else:
                     to_remove.append(identifier)
-            # Raise alert if failed > 5 times within the last 5m window
-            # re-alert every 5 minutes
-            elif info["failures"] >= 5 and (
+            # Raise alert if failed > $threshold times within the last 5m window
+            # or if already alerted and not yet resolved.
+            # Re-alert every 5 minutes but not more often.
+            elif (
+                info["failures"] >= alert_threshold or (info["sent"] and not resolved)
+            ) and (
                 not info.get("last_alert")
                 or current_time - datetime.fromisoformat(info["last_alert"])
                 > timedelta(minutes=5)
