@@ -170,6 +170,10 @@ class ZendutyEvent(Event):
         state = self.check.state()
         if isinstance(state, PublisherState):
             alert_identifier += f"-{state.publisher_name}"
+            symbol = self.check.state().symbol.replace(".", "-").replace("/", "-").lower()
+            cluster = "solana-mainnet-beta" if self.context.network == "mainnet" else self.context.network
+            publisher_key = state.public_key.key
+            summary += f"https://pyth.network/metrics?price-feed={symbol}&cluster={cluster}&publisher={publisher_key}\n"
 
         logger.debug(f"Sending Zenduty alert for {alert_identifier}")
         await send_zenduty_alert(

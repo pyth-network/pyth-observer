@@ -208,7 +208,9 @@ class Dispatch:
                 logger.debug(f"Raising Zenduty alert {identifier}")
                 self.open_alerts[identifier]["sent"] = True
                 self.open_alerts[identifier]["last_alert"] = current_time.isoformat()
-                to_alert.append(self.zenduty_events[identifier].send())
+                event = self.zenduty_events.get(identifier)
+                if event:
+                    to_alert.append(event.send())
 
         await asyncio.gather(*to_alert)
         for identifier in to_remove:
