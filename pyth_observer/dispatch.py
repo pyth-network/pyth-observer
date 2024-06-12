@@ -89,7 +89,7 @@ class Dispatch:
                             "failures": 1,
                             "last_window_failures": None,
                             "sent": False,
-                            "event_type": event_type
+                            "event_type": event_type,
                         }
                     else:
                         alert["failures"] += 1
@@ -188,7 +188,10 @@ class Dispatch:
             ):
                 logger.debug(f"Resolving Zenduty alert {identifier}")
                 resolved = True
-                if info["sent"] and info.get("event_type", "ZendutyEvent") == "ZendutyEvent":
+                if (
+                    info["sent"]
+                    and info.get("event_type", "ZendutyEvent") == "ZendutyEvent"
+                ):
                     response = await send_zenduty_alert(
                         identifier, identifier, resolved=True
                     )
