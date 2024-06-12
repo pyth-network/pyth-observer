@@ -1,26 +1,29 @@
 network:
   name: "pythnet"
-  http_endpoint: "https://pythnet.rpcpool.com"
-  ws_endpoint: "wss://pythnet.rpcpool.com"
+  http_endpoint: "https://api2.pythnet.pyth.network"
+  ws_endpoint: "wss://api2.pythnet.pyth.network"
   first_mapping: "AHtgzX45WTKfkPG53L6WYhGEXwQkN1BVknET3sVsLL8J"
   crosschain_endpoint: "https://hermes.pyth.network"
   request_rate_limit: 10
   request_rate_period: 1
 events:
-  # NOTE: Uncomment to enable Datadog metrics, see README.md for datadog credential docs.
-  # - DatadogEvent
   - LogEvent
+  # - DatadogEvent
   # - TelegramEvent
   - ZendutyEvent
+# Alert thresholds apply to Zenduty and Telegram events
+# - Checks run approximately once per minute
+#   - `alert_threshold`: number of failures within 5 minutes >= to this value trigger an alert (default: 5)
+#   - `resolution_threshold`: number of failures within 5 minutes <= this value resolve the alert (default: 3)
 checks:
   global:
     # Price feed checks
     PriceFeedOfflineCheck:
       enable: true
-      max_slot_distance: 25
+      max_slot_distance: 120
       abandoned_slot_distance: 100000
-      zenduty_alert_threshold: 3
-      zenduty_resolution_threshold: 0
+      alert_threshold: 3
+      resolution_threshold: 0
     PriceFeedCoinGeckoCheck:
       enable: true
       max_deviation: 5
@@ -46,24 +49,48 @@ checks:
     PublisherPriceCheck:
       enable: true
       max_slot_distance: 25
-      max_aggregate_distance: 6
-      zenduty_alert_threshold: 5
-      zenduty_resolution_threshold: 2
+      max_aggregate_distance: 5
+      alert_threshold: 2
+      resolution_threshold: 1
     PublisherStalledCheck:
       enable: false
       stall_time_limit: 30
-      abandoned_time_limit: 600
+      abandoned_time_limit: 300
       max_slot_distance: 25
-      zenduty_alert_threshold: 1
-      zenduty_resolution_threshold: 0
+      alert_threshold: 1
+      resolution_threshold: 0
   # Per-symbol config
+  Crypto.ANC/USD:
+    PublisherPriceCheck:
+      enable: true
+      max_slot_distance: 25
+      max_aggregate_distance: 50
+  Crypto.MIR/USD:
+    PublisherPriceCheck:
+      enable: true
+      max_slot_distance: 25
+      max_aggregate_distance: 25
   Crypto.MNGO/USD:
     PriceFeedOfflineCheck:
-      max_slot_distance: 10000
+      max_slot_distance: 100000
+  Crypto.SLND/USD:
+    PriceFeedOfflineCheck:
+      max_slot_distance: 100000
+  Crypto.SNY/USD:
+    PriceFeedOfflineCheck:
+      max_slot_distance: 100000
+  Crypto.PORT/USD:
+    PriceFeedOfflineCheck:
+      max_slot_distance: 100000
   FX.USD/HKD:
     PriceFeedOfflineCheck:
       max_slot_distance: 10000
+  Crypto.ZBC/USD:
+    PublisherPriceCheck:
+      max_aggregate_distance: 30
   Crypto.BTC/USD:
     PublisherStalledCheck:
       enable: true
-      stall_time_limit: 60
+      stall_time_limit: 300 # This will override the global stall_time_limit for Crypto.BTC/USD
+      abandoned_time_limit: 600 # This will override the global abandoned_time_limit for Crypto.BTC/USD
+      max_slot_distance: 25
