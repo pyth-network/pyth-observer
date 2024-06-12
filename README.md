@@ -33,18 +33,18 @@ Event types are configured via environment variables:
 
 - `TelegramEvent`
   - `TELEGRAM_BOT_TOKEN` - API token for the Telegram bot
+  - `OPEN_ALERTS_FILE` - Path to local file used for persisting open alerts
 
 - `ZendutyEvent`
   - `ZENDUTY_INTEGRATION_KEY` - Integration key for Zenduty service API integration
   - `OPEN_ALERTS_FILE` - Path to local file used for persisting open alerts
 
-### Zenduty Alert Thresholds
-- Zenduty alert will fire if a check fails 5 or more times within 5 minutes.
-- The alert will be resolved if the check failed < 4 times within 5 minutes.
+### Alert Thresholds
+- Alert thresholds apply to ZendutyEvent and TelegramEvent (resolution only applies to zenduty)
 - Checks run approximately once per minute.
 - These thresholds can be overridden per check type in config.yaml
-  - `zenduty_alert_threshold`: number of failures in 5 minutes >= to this value trigger an alert (default: 5)
-  - `zenduty_resolution_threshold`: number of failures in 5 minutes <= this value resolve the alert (default: 3)
+  - `alert_threshold`: number of failures in 5 minutes >= to this value trigger an alert (default: 5)
+  - `resolution_threshold`: number of failures in 5 minutes <= this value resolve the alert (default: 3)
 
 ## Finding the Telegram Group Chat ID
 

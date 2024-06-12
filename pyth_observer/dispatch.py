@@ -47,7 +47,7 @@ class Dispatch:
             self.open_alerts = self.load_alerts()
             # below is used to store events to later send if mutilple failures occur
             # events cannot be stored in open_alerts as they are not JSON serializable.
-            self.zenduty_events = {}
+            self.delayed_events = {}
 
     def load_alerts(self):
         try:
@@ -79,7 +79,7 @@ class Dispatch:
             for event_type in self.config["events"]:
                 event: Event = globals()[event_type](check, context)
 
-                if event_type == "ZendutyEvent":
+                if event_type in ["ZendutyEvent", "TelegramEvent"]:
                     alert_identifier = self.generate_alert_identifier(check)
                     alert = self.open_alerts.get(alert_identifier)
                     if alert is None:
@@ -89,11 +89,12 @@ class Dispatch:
                             "failures": 1,
                             "last_window_failures": None,
                             "sent": False,
+                            "event_type": event_type
                         }
                     else:
                         alert["failures"] += 1
-                    self.zenduty_events[alert_identifier] = event
-                    continue  # Skip sending immediately for ZendutyEvent
+                    self.delayed_events[alert_identifier] = event
+                    continue  # Skip sending immediately for ZendutyEvent or TelegramEvent
 
                 sent_events.append(event.send())
 
@@ -177,8 +178,8 @@ class Dispatch:
         for identifier, info in self.open_alerts.items():
             self.check_zd_alert_status(identifier, current_time)
             check_config = self.config["checks"]["global"][info["type"]]
-            alert_threshold = check_config.get("zenduty_alert_threshold", 5)
-            resolution_threshold = check_config.get("zenduty_resolution_threshold", 3)
+            alert_threshold = check_config.get("alert_threshold", 5)
+            resolution_threshold = check_config.get("resolution_threshold", 3)
             # Resolve the alert if raised and failed < $threshold times in the last 5m window
             resolved = False
             if (
@@ -187,7 +188,7 @@ class Dispatch:
             ):
                 logger.debug(f"Resolving Zenduty alert {identifier}")
                 resolved = True
-                if info["sent"]:
+                if info["sent"] and info.get("event_type", "ZendutyEvent") == "ZendutyEvent":
                     response = await send_zenduty_alert(
                         identifier, identifier, resolved=True
                     )
@@ -208,7 +209,7 @@ class Dispatch:
                 logger.debug(f"Raising Zenduty alert {identifier}")
                 self.open_alerts[identifier]["sent"] = True
                 self.open_alerts[identifier]["last_alert"] = current_time.isoformat()
-                event = self.zenduty_events.get(identifier)
+                event = self.delayed_events.get(identifier)
                 if event:
                     to_alert.append(event.send())
 
@@ -216,8 +217,8 @@ class Dispatch:
         for identifier in to_remove:
             if self.open_alerts.get(identifier):
                 del self.open_alerts[identifier]
-            if self.zenduty_events.get(identifier):
-                del self.zenduty_events[identifier]
+            if self.delayed_events.get(identifier):
+                del self.delayed_events[identifier]
 
         with open(self.open_alerts_file, "w") as file:
             json.dump(self.open_alerts, file)
