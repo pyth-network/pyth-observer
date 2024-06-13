@@ -89,11 +89,10 @@ class Dispatch:
                             "failures": 1,
                             "last_window_failures": None,
                             "sent": False,
-                            "event_type": event_type,
                         }
                     else:
                         alert["failures"] += 1
-                    self.delayed_events[alert_identifier] = event
+                    self.delayed_events[f"{event_type}-{alert_identifier}"] = event
                     continue  # Skip sending immediately for ZendutyEvent or TelegramEvent
 
                 sent_events.append(event.send())
@@ -188,10 +187,7 @@ class Dispatch:
             ):
                 logger.debug(f"Resolving Zenduty alert {identifier}")
                 resolved = True
-                if (
-                    info["sent"]
-                    and info.get("event_type", "ZendutyEvent") == "ZendutyEvent"
-                ):
+                if info["sent"]:
                     response = await send_zenduty_alert(
                         identifier, identifier, resolved=True
                     )
@@ -212,16 +208,23 @@ class Dispatch:
                 logger.debug(f"Raising Zenduty alert {identifier}")
                 self.open_alerts[identifier]["sent"] = True
                 self.open_alerts[identifier]["last_alert"] = current_time.isoformat()
-                event = self.delayed_events.get(identifier)
-                if event:
-                    to_alert.append(event.send())
+                for event_type in ["ZendutyEvent", "TelegramEvent"]:
+                    key = f"{event_type}-{identifier}"
+                    event = self.delayed_events.get(key)
+                    if event:
+                        to_alert.append(event.send())
 
+        # Send the alerts that were delayed due to thresholds
         await asyncio.gather(*to_alert)
+
+        # Remove alerts that have been resolved
         for identifier in to_remove:
             if self.open_alerts.get(identifier):
                 del self.open_alerts[identifier]
-            if self.delayed_events.get(identifier):
-                del self.delayed_events[identifier]
+            for event_type in ["ZendutyEvent", "TelegramEvent"]:
+                key = f"{event_type}-{identifier}"
+                if self.delayed_events.get(key):
+                    del self.delayed_events[key]
 
         with open(self.open_alerts_file, "w") as file:
             json.dump(self.open_alerts, file)
