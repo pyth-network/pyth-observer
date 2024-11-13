@@ -77,7 +77,6 @@ class Observer:
             coingecko_prices, coingecko_updates = await self.get_coingecko_prices()
             crosschain_prices = await self.get_crosschain_prices()
 
-            failed_checks = []
             for product in products:
                 # Skip tombstone accounts with blank metadata
                 if "base" not in product.attrs:
@@ -160,16 +159,10 @@ class Observer:
                             )
                         )
 
-                cur_failed_checks = await self.dispatch.run(states)
-                if cur_failed_checks:
-                    failed_checks.extend(cur_failed_checks)
+                await self.dispatch.run(states)
 
-            if failed_checks:
-                logger.error(f"Failed checks: {len(failed_checks)}")
-            else:
-                logger.info("All checks passed")
             logger.debug("Sleeping...")
-            await asyncio.sleep(30)
+            await asyncio.sleep(5)
 
     async def get_pyth_products(self) -> List[PythProductAccount]:
         logger.debug("Fetching Pyth product accounts...")

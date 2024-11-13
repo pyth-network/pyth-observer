@@ -277,8 +277,8 @@ class PriceFeedCrossChainDeviationCheck(PriceFeedCheck):
 
 
 PRICE_FEED_CHECKS = [
-    # PriceFeedCoinGeckoCheck,
-    # PriceFeedCrossChainDeviationCheck,
-    # PriceFeedCrossChainOnlineCheck,
-    # PriceFeedOfflineCheck,
+    PriceFeedCoinGeckoCheck,
+    PriceFeedCrossChainDeviationCheck,
+    PriceFeedCrossChainOnlineCheck,
+    PriceFeedOfflineCheck,
 ]
