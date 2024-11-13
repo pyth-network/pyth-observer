@@ -32,17 +32,13 @@ PriceFeedCheckConfig = Dict[str, str | float | int | bool]
 
 @runtime_checkable
 class PriceFeedCheck(Protocol):
-    def __init__(self, state: PriceFeedState, config: PriceFeedCheckConfig):
-        ...
+    def __init__(self, state: PriceFeedState, config: PriceFeedCheckConfig): ...
 
-    def state(self) -> PriceFeedState:
-        ...
+    def state(self) -> PriceFeedState: ...
 
-    def run(self) -> bool:
-        ...
+    def run(self) -> bool: ...
 
-    def error_message(self) -> dict:
-        ...
+    def error_message(self) -> dict: ...
 
 
 class PriceFeedOfflineCheck(PriceFeedCheck):
@@ -281,8 +277,8 @@ class PriceFeedCrossChainDeviationCheck(PriceFeedCheck):
 
 
 PRICE_FEED_CHECKS = [
-    PriceFeedCoinGeckoCheck,
-    PriceFeedCrossChainDeviationCheck,
-    PriceFeedCrossChainOnlineCheck,
-    PriceFeedOfflineCheck,
+    # PriceFeedCoinGeckoCheck,
+    # PriceFeedCrossChainDeviationCheck,
+    # PriceFeedCrossChainOnlineCheck,
+    # PriceFeedOfflineCheck,
 ]

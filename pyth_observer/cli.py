@@ -67,6 +67,7 @@ def run(config, publishers, coingecko_mapping, prometheus_port):
 logger.remove()
 logger.add(
     sys.stdout,
+    colorize=(os.environ.get("DEV_MODE")),
     serialize=(not os.environ.get("DEV_MODE")),
     level=os.environ.get("LOG_LEVEL", "INFO"),
 )

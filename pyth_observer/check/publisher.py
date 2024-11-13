@@ -1,16 +1,35 @@
+from collections import defaultdict, deque
 import time
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from datetime import datetime
-from typing import Dict, Protocol, runtime_checkable
+from typing import Dict, List, Optional, Protocol, runtime_checkable
 from zoneinfo import ZoneInfo
-
+from loguru import logger
 from pythclient.calendar import is_market_open
 from pythclient.pythaccounts import PythPriceStatus
 from pythclient.solana import SolanaPublicKey
 
-PUBLISHER_EXCLUSION_DISTANCE = 25
 
-PUBLISHER_CACHE = {}
+@dataclass
+class PriceUpdate:
+    """Represents a single price with its timestamp (epoch seconds)."""
+
+    timestamp: int
+    price: float
+
+
+PUBLISHER_EXCLUSION_DISTANCE = 25
+PUBLISHER_CACHE_MAX_LEN = 30
+"""Roughly 30 mins of updates, since the check runs about once a minute"""
+
+PUBLISHER_CACHE: Dict[tuple[str, str], List[PriceUpdate]] = defaultdict(
+    lambda: deque(maxlen=PUBLISHER_CACHE_MAX_LEN)
+)
+"""
+Cache that holds tuples of (price, timestamp) for publisher/feed combos as they stream in.
+Entries longer than `PUBLISHER_CACHE_MAX_LEN` are automatically pruned.
+Used by the PublisherStalledCheck to detect stalls in prices.
+"""
 
 
 @dataclass
@@ -35,17 +54,13 @@ PublisherCheckConfig = Dict[str, str | float | int | bool]
 
 @runtime_checkable
 class PublisherCheck(Protocol):
-    def __init__(self, state: PublisherState, config: PublisherCheckConfig):
-        ...
+    def __init__(self, state: PublisherState, config: PublisherCheckConfig): ...
 
-    def state(self) -> PublisherState:
-        ...
+    def state(self) -> PublisherState: ...
 
-    def run(self) -> bool:
-        ...
+    def run(self) -> bool: ...
 
-    def error_message(self) -> dict:
-        ...
+    def error_message(self) -> dict: ...
 
 
 class PublisherWithinAggregateConfidenceCheck(PublisherCheck):
@@ -240,6 +255,20 @@ class PublisherStalledCheck(PublisherCheck):
         self.__abandoned_time_limit: int = int(config["abandoned_time_limit"])
         self.__max_slot_distance: int = int(config["max_slot_distance"])
 
+        from pyth_observer.check.stall_detection import (
+            StallDetectionResult,
+            StallDetector,
+        )  # noqa: deferred import to avoid circular import
+
+        self.__detector = StallDetector(
+            stall_time_limit=self.__stall_time_limit,
+            noise_threshold=float(config.get("noise_threshold")),
+            min_noise_samples=int(config.get("min_noise_samples")),
+        )
+
+        # Keep track of last analysis for error reporting
+        self.__last_analysis: Optional[StallDetectionResult] = None
+
     def state(self) -> PublisherState:
         return self.__state
 
@@ -254,36 +283,46 @@ class PublisherStalledCheck(PublisherCheck):
 
         distance = self.__state.latest_block_slot - self.__state.slot
 
+        # Pass for redemption rates because they are expected to be static for long periods
+        if self.__state.asset_type == "Crypto Redemption Rate":
+            logger.info(f"Redemption rate: Skipping {self.__state.symbol}")
+            return True
+
         #  Pass when publisher is offline because PublisherOfflineCheck will be triggered
         if distance >= self.__max_slot_distance:
             return True
 
-        publisher_key = (self.__state.publisher_name, self.__state.symbol)
         current_time = int(time.time())
-        previous_price, last_change_time = PUBLISHER_CACHE.get(
-            publisher_key, (None, None)
-        )
 
-        if previous_price is None or self.__state.price != previous_price:
-            PUBLISHER_CACHE[publisher_key] = (self.__state.price, current_time)
+        publisher_key = (self.__state.publisher_name, self.__state.symbol)
+        PUBLISHER_CACHE[publisher_key].append(
+            PriceUpdate(current_time, self.__state.price)
+        ),
+        updates = PUBLISHER_CACHE[publisher_key]
+
+        # Analyze for stalls
+        result = self.__detector.analyze_updates(list(updates))
+        logger.debug(f"Stall detection result: {result}")
+
+        self.__last_analysis = result  # For error logging
+
+        # If we've been stalled for too long, abandon this check
+        if result.is_stalled and result.duration > self.__abandoned_time_limit:
             return True
 
-        time_since_last_change = current_time - last_change_time
-        if time_since_last_change > self.__stall_time_limit:
-            if time_since_last_change > self.__abandoned_time_limit:
-                return True  # Abandon this check after the abandoned time limit
-            return False
-
-        return True
+        return not result.is_stalled
 
     def error_message(self) -> dict:
+        stall_duration = f"{self.__last_analysis.duration:.1f} seconds"
         return {
-            "msg": f"{self.__state.publisher_name} has been publishing the same price for too long.",
+            "msg": f"{self.__state.publisher_name} has been publishing the same price of {self.__state.symbol} for {stall_duration}",
             "type": "PublisherStalledCheck",
             "publisher": self.__state.publisher_name,
             "symbol": self.__state.symbol,
             "price": self.__state.price,
-            "stall_duration": f"{int(time.time()) - PUBLISHER_CACHE[(self.__state.publisher_name, self.__state.symbol)][1]} seconds",
+            "stall_type": self.__last_analysis.stall_type,
+            "stall_duration": stall_duration,
+            "analysis": asdict(self.__last_analysis),
         }
 
 
