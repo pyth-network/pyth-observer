@@ -22,9 +22,7 @@ PUBLISHER_EXCLUSION_DISTANCE = 25
 PUBLISHER_CACHE_MAX_LEN = 30
 """Roughly 30 mins of updates, since the check runs about once a minute"""
 
-PUBLISHER_CACHE: Dict[tuple[str, str], List[PriceUpdate]] = defaultdict(
-    lambda: deque(maxlen=PUBLISHER_CACHE_MAX_LEN)
-)
+PUBLISHER_CACHE = defaultdict(lambda: deque(maxlen=PUBLISHER_CACHE_MAX_LEN))
 """
 Cache that holds tuples of (price, timestamp) for publisher/feed combos as they stream in.
 Entries longer than `PUBLISHER_CACHE_MAX_LEN` are automatically pruned.
@@ -54,13 +52,17 @@ PublisherCheckConfig = Dict[str, str | float | int | bool]
 
 @runtime_checkable
 class PublisherCheck(Protocol):
-    def __init__(self, state: PublisherState, config: PublisherCheckConfig): ...
+    def __init__(self, state: PublisherState, config: PublisherCheckConfig):
+        ...
 
-    def state(self) -> PublisherState: ...
+    def state(self) -> PublisherState:
+        ...
 
-    def run(self) -> bool: ...
+    def run(self) -> bool:
+        ...
 
-    def error_message(self) -> dict: ...
+    def error_message(self) -> dict:
+        ...
 
 
 class PublisherWithinAggregateConfidenceCheck(PublisherCheck):
@@ -256,18 +258,14 @@ class PublisherStalledCheck(PublisherCheck):
         self.__max_slot_distance: int = int(config["max_slot_distance"])
 
         from pyth_observer.check.stall_detection import (
-            StallDetectionResult,
             StallDetector,
         )  # noqa: deferred import to avoid circular import
 
         self.__detector = StallDetector(
             stall_time_limit=self.__stall_time_limit,
-            noise_threshold=float(config.get("noise_threshold")),
-            min_noise_samples=int(config.get("min_noise_samples")),
+            noise_threshold=float(config["noise_threshold"]),
+            min_noise_samples=int(config["min_noise_samples"]),
         )
-
-        # Keep track of last analysis for error reporting
-        self.__last_analysis: Optional[StallDetectionResult] = None
 
     def state(self) -> PublisherState:
         return self.__state
@@ -297,7 +295,7 @@ class PublisherStalledCheck(PublisherCheck):
         publisher_key = (self.__state.publisher_name, self.__state.symbol)
         PUBLISHER_CACHE[publisher_key].append(
             PriceUpdate(current_time, self.__state.price)
-        ),
+        )
         updates = PUBLISHER_CACHE[publisher_key]
 
         # Analyze for stalls

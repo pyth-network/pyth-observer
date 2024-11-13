@@ -2,7 +2,6 @@ import random
 import time
 from unittest.mock import patch
 
-import numpy as np
 import pytest
 from pythclient.pythaccounts import PythPriceStatus
 from pythclient.solana import SolanaPublicKey

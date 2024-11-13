@@ -133,17 +133,17 @@ class StallDetector:
             return StallDetectionResult(
                 is_stalled=True,
                 stall_type="noisy",
-                base_price=base_price,
-                noise_magnitude=max_relative_deviation * base_price,
+                base_price=float(base_price),
+                noise_magnitude=float(max_relative_deviation * base_price),
                 duration=duration,
-                confidence=confidence,
+                confidence=float(confidence),
             )
 
         return StallDetectionResult(
             is_stalled=False,
             stall_type=None,
-            base_price=base_price,
-            noise_magnitude=max_relative_deviation * base_price,
+            base_price=float(base_price),
+            noise_magnitude=float(max_relative_deviation * base_price),
             duration=duration,
             confidence=0.0,
         )

@@ -27,7 +27,8 @@ class Event(Protocol):
     check: Check
     context: Context
 
-    async def send(self): ...
+    async def send(self):
+        ...
 
 
 class DatadogEvent(Event):
