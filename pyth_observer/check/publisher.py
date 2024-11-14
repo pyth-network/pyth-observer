@@ -284,7 +284,6 @@ class PublisherStalledCheck(PublisherCheck):
 
         # Pass for redemption rates because they are expected to be static for long periods
         if self.__state.asset_type == "Crypto Redemption Rate":
-            logger.info(f"Redemption rate: Skipping {self.__state.symbol}")
             return True
 
         #  Pass when publisher is offline because PublisherOfflineCheck will be triggered
