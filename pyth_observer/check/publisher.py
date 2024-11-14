@@ -1,9 +1,10 @@
-from collections import defaultdict, deque
 import time
+from collections import defaultdict, deque
 from dataclasses import asdict, dataclass
 from datetime import datetime
-from typing import Dict, List, Optional, Protocol, runtime_checkable
+from typing import Dict, Protocol, runtime_checkable
 from zoneinfo import ZoneInfo
+
 from loguru import logger
 from pythclient.calendar import is_market_open
 from pythclient.pythaccounts import PythPriceStatus
@@ -257,9 +258,9 @@ class PublisherStalledCheck(PublisherCheck):
         self.__abandoned_time_limit: int = int(config["abandoned_time_limit"])
         self.__max_slot_distance: int = int(config["max_slot_distance"])
 
-        from pyth_observer.check.stall_detection import (
+        from pyth_observer.check.stall_detection import (  # noqa: deferred import to avoid circular import
             StallDetector,
-        )  # noqa: deferred import to avoid circular import
+        )
 
         self.__detector = StallDetector(
             stall_time_limit=self.__stall_time_limit,

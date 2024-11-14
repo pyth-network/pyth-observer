@@ -28,7 +28,7 @@ class StallDetectionResult:
             base_price=None,
             noise_magnitude=None,
             duration=0.0,
-            confidence=0.0,
+            confidence=1.0,
         )
 
 
