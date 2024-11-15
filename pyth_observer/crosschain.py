@@ -48,7 +48,8 @@ class CrosschainPriceObserver:
                 async with session.get(
                     price_feeds_url + query_string,
                 ) as response:
-                    price_feeds += await response.json()
+                    response_json = await response.json()
+                    price_feeds.extend(response_json["parsed"])
 
         # Return a dictionary of id -> {price, conf, expo} for fast lookup
         return {
