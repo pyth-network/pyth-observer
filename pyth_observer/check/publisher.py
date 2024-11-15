@@ -293,13 +293,17 @@ class PublisherStalledCheck(PublisherCheck):
         current_time = int(time.time())
 
         publisher_key = (self.__state.publisher_name, self.__state.symbol)
-        PUBLISHER_CACHE[publisher_key].append(
-            PriceUpdate(current_time, self.__state.price)
-        )
         updates = PUBLISHER_CACHE[publisher_key]
 
+        # Only cache new prices, let repeated prices grow stale.
+        # These will be caught as an exact stall in the detector.
+        is_repeated_price = updates and updates[-1].price == self.__state.price
+        cur_update = PriceUpdate(current_time, self.__state.price)
+        if not is_repeated_price:
+            PUBLISHER_CACHE[publisher_key].append(cur_update)
+
         # Analyze for stalls
-        result = self.__detector.analyze_updates(list(updates))
+        result = self.__detector.analyze_updates(list(updates), cur_update)
         logger.debug(f"Stall detection result: {result}")
 
         self.__last_analysis = result  # For error logging

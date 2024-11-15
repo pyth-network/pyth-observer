@@ -78,33 +78,36 @@ class StallDetector:
         self.noise_threshold = noise_threshold
         self.min_noise_samples = min_noise_samples
 
-    def analyze_updates(self, updates: List[PriceUpdate]) -> StallDetectionResult:
+    def analyze_updates(
+        self, updates: List[PriceUpdate], cur_update: PriceUpdate
+    ) -> StallDetectionResult:
         """
         Assumes that the cache has been recently updated since it takes the latest
         cached timestamp as the current time.
 
         Args:
             updates: List of price updates to analyze
+            cur_update: The update currently being processed. If it's a repeated price,
+              the update won't be in `updates`, so we need it as a separate parameter.
 
         Returns:
             StallDetectionResult with detection details
         """
-        # Need at least 2 samples
-        if not updates or len(updates) < 2:
+        # Need at least 1 sample
+        if not updates:
             return StallDetectionResult.no_stall()
 
         ## Check for exact stall
 
         # The latest 2 updates are sufficient to detect an exact stall
-        latest_updates = updates[-2:]
-        duration = latest_updates[1].timestamp - latest_updates[0].timestamp
+        duration = cur_update.timestamp - updates[-1].timestamp
         if duration <= self.stall_time_limit:
             return StallDetectionResult.no_stall()
-        elif latest_updates[1].price == latest_updates[0].price:
+        elif cur_update.price == updates[-1].price:
             return StallDetectionResult(
                 is_stalled=True,
                 stall_type="exact",
-                base_price=latest_updates[1].price,
+                base_price=cur_update.price,
                 noise_magnitude=0.0,
                 duration=duration,
                 confidence=1.0,

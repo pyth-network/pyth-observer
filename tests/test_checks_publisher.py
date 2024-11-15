@@ -121,6 +121,24 @@ class TestPublisherStalledCheck:
         state_c.price = 105.0  # Change the price
         self.run_check(check_c, 3, True)  # Should pass as price changes
         state_c.price = 100.0  # Change back to original price
+        # Simulate a stall -- send the same price repeatedly.
+        self.run_check(check_c, 2, True)
+        state_c.price = 100.0
+        self.run_check(check_c, 2, True)
+        state_c.price = 100.0
+        self.run_check(check_c, 2, True)
+        state_c.price = 100.0
+        self.run_check(
+            check_c, 2, False
+        )  # Should fail since we breached the stall time limit
+
+        PUBLISHER_CACHE.clear()
+        state_c = make_publisher_state(1, 100.0, 2.0, 1, 100.0, 1.0)
+        check_c = self.setup_check(state_c, stall_time_limit=5)
+        self.run_check(check_c, 2, True)  # Initial check should pass
+        state_c.price = 105.0  # Change the price
+        self.run_check(check_c, 3, True)  # Should pass as price changes
+        state_c.price = 100.0  # Change back to original price
         self.run_check(check_c, 4, True)  # Should pass as price changes
         self.run_check(
             check_c, 8, False
