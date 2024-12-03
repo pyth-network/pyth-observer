@@ -90,6 +90,12 @@ class Observer:
                 # for each publisher).
                 states = []
                 price_accounts = await self.get_pyth_prices(product)
+
+                # If the min_publishers is set to 255, this is a "coming soon" feed and is not live yet
+                # Skip alerting on these feeds
+                if product.prices[PythPriceType.PRICE].min_publishers == 255:
+                    continue
+
                 crosschain_price = crosschain_prices.get(
                     b58decode(product.first_price_account_key.key).hex(), None
                 )
