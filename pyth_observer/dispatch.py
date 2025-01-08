@@ -197,13 +197,16 @@ class Dispatch:
                     to_remove.append(identifier)
             # Raise alert if failed > $threshold times within the last 5m window
             # or if already alerted and not yet resolved.
-            # Re-alert every 5 minutes but not more often.
+            # Re-alert at the start of each hour but not more often.
             elif (
                 info["failures"] >= alert_threshold or (info["sent"] and not resolved)
             ) and (
-                not info.get("last_alert")
-                or current_time - datetime.fromisoformat(info["last_alert"])
-                > timedelta(minutes=5)
+                not info.get("last_alert")  # First alert - send immediately
+                or (  # Subsequent alerts - send at the start of each hour
+                    current_time - datetime.fromisoformat(info["last_alert"])
+                    > timedelta(minutes=5)
+                    and current_time.minute == 0  # Only alert at the start of each hour
+                )
             ):
                 logger.debug(f"Raising Zenduty alert {identifier}")
                 self.open_alerts[identifier]["sent"] = True
