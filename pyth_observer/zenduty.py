@@ -9,7 +9,7 @@ headers = {"Content-Type": "application/json"}
 
 
 async def send_zenduty_alert(alert_identifier, message, resolved=False, summary=""):
-    url = f"https://www.zenduty.com/api/events/{os.environ['ZENDUTY_INTEGRATION_KEY']}/"
+    url = f"https://events.zenduty.com/api/events/{os.environ['ZENDUTY_INTEGRATION_KEY']}/"
     # Use a hash of the alert_identifier as a unique id for the alert.
     # Take the first 32 characters due to length limit of the api.
     entity_id = hashlib.sha256(alert_identifier.encode("utf-8")).hexdigest()[:32]
