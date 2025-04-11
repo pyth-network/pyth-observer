@@ -4,6 +4,7 @@ from typing import Any, Dict, List, Tuple
 
 from base58 import b58decode
 from loguru import logger
+from pythclient.market_schedule import MarketSchedule
 from pythclient.pythaccounts import PythPriceAccount, PythPriceType, PythProductAccount
 from pythclient.pythclient import PythClient
 from pythclient.solana import (
@@ -120,6 +121,7 @@ class Observer:
                         PriceFeedState(
                             symbol=product.attrs["symbol"],
                             asset_type=product.attrs["asset_type"],
+                            schedule=MarketSchedule(product.attrs["schedule"]),
                             public_key=price_account.key,
                             status=price_account.aggregate_price_status,
                             # this is the solana block slot when price account was fetched
@@ -146,6 +148,7 @@ class Observer:
                                 publisher_name=publisher_name,
                                 symbol=product.attrs["symbol"],
                                 asset_type=product.attrs["asset_type"],
+                                schedule=MarketSchedule(product.attrs["schedule"]),
                                 public_key=component.publisher_key,
                                 confidence_interval=component.latest_price_info.confidence_interval,
                                 confidence_interval_aggregate=price_account.aggregate_price_info.confidence_interval,

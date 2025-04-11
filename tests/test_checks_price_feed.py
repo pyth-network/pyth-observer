@@ -1,3 +1,4 @@
+from pythclient.market_schedule import MarketSchedule
 from pythclient.pythaccounts import PythPriceStatus
 from pythclient.solana import SolanaPublicKey
 
@@ -8,6 +9,7 @@ def test_price_feed_offline_check():
     state = PriceFeedState(
         symbol="Crypto.BTC/USD",
         asset_type="Crypto",
+        schedule=MarketSchedule("America/New_York;O,O,O,O,O,O,O;"),
         public_key=SolanaPublicKey("2hgu6Umyokvo8FfSDdMa9nDKhcdv9Q4VvGNhRCeSWeD3"),
         status=PythPriceStatus.TRADING,
         latest_block_slot=100,

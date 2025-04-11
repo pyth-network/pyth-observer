@@ -5,7 +5,7 @@ from typing import Dict, Optional, Protocol, runtime_checkable
 from zoneinfo import ZoneInfo
 
 import arrow
-from pythclient.calendar import is_market_open
+from pythclient.market_schedule import MarketSchedule
 from pythclient.pythaccounts import PythPriceStatus
 from pythclient.solana import SolanaPublicKey
 
@@ -16,6 +16,7 @@ from pyth_observer.crosschain import CrosschainPrice
 class PriceFeedState:
     symbol: str
     asset_type: str
+    schedule: MarketSchedule
     public_key: SolanaPublicKey
     status: PythPriceStatus
     latest_block_slot: int
@@ -55,8 +56,7 @@ class PriceFeedOfflineCheck(PriceFeedCheck):
         return self.__state
 
     def run(self) -> bool:
-        market_open = is_market_open(
-            self.__state.asset_type.lower(),
+        market_open = self.__state.schedule.is_market_open(
             datetime.now(ZoneInfo("America/New_York")),
         )
 
@@ -176,8 +176,7 @@ class PriceFeedCrossChainOnlineCheck(PriceFeedCheck):
         if self.__state.status != PythPriceStatus.TRADING:
             return True
 
-        market_open = is_market_open(
-            self.__state.asset_type.lower(),
+        market_open = self.__state.schedule.is_market_open(
             datetime.now(ZoneInfo("America/New_York")),
         )
 
@@ -237,8 +236,7 @@ class PriceFeedCrossChainDeviationCheck(PriceFeedCheck):
         if self.__state.status != PythPriceStatus.TRADING:
             return True
 
-        market_open = is_market_open(
-            self.__state.asset_type.lower(),
+        market_open = self.__state.schedule.is_market_open(
             datetime.now(ZoneInfo("America/New_York")),
         )
 
