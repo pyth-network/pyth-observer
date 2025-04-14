@@ -6,7 +6,7 @@ from typing import Dict, Protocol, runtime_checkable
 from zoneinfo import ZoneInfo
 
 from loguru import logger
-from pythclient.calendar import is_market_open
+from pythclient.market_schedule import MarketSchedule
 from pythclient.pythaccounts import PythPriceStatus
 from pythclient.solana import SolanaPublicKey
 
@@ -36,6 +36,7 @@ class PublisherState:
     publisher_name: str
     symbol: str
     asset_type: str
+    schedule: MarketSchedule
     public_key: SolanaPublicKey
     status: PythPriceStatus
     aggregate_status: PythPriceStatus
@@ -161,8 +162,7 @@ class PublisherOfflineCheck(PublisherCheck):
         return self.__state
 
     def run(self) -> bool:
-        market_open = is_market_open(
-            self.__state.asset_type.lower(),
+        market_open = self.__state.schedule.is_market_open(
             datetime.now(ZoneInfo("America/New_York")),
         )
 
@@ -272,8 +272,7 @@ class PublisherStalledCheck(PublisherCheck):
         return self.__state
 
     def run(self) -> bool:
-        market_open = is_market_open(
-            self.__state.asset_type.lower(),
+        market_open = self.__state.schedule.is_market_open(
             datetime.now(ZoneInfo("America/New_York")),
         )
 

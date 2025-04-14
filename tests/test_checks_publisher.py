@@ -3,6 +3,7 @@ import time
 from unittest.mock import patch
 
 import pytest
+from pythclient.market_schedule import MarketSchedule
 from pythclient.pythaccounts import PythPriceStatus
 from pythclient.solana import SolanaPublicKey
 
@@ -29,6 +30,7 @@ def make_publisher_state(
         publisher_name="publisher",
         symbol=symbol,
         asset_type=asset_type,
+        schedule=MarketSchedule("America/New_York;O,O,O,O,O,O,O;"),
         public_key=SolanaPublicKey("2hgu6Umyokvo8FfSDdMa9nDKhcdv9Q4VvGNhRCeSWeD3"),
         status=PythPriceStatus.TRADING,
         aggregate_status=PythPriceStatus.TRADING,
