@@ -1,5 +1,6 @@
 import asyncio
 import os
+import pprint
 from typing import Any, Dict, List, Tuple
 
 from base58 import b58decode
@@ -24,6 +25,7 @@ from pyth_observer.crosschain import CrosschainPrice
 from pyth_observer.crosschain import CrosschainPriceObserver as Crosschain
 from pyth_observer.dispatch import Dispatch
 from pyth_observer.models import Publisher
+import pyth_observer.health_server as health_server
 
 PYTHTEST_HTTP_ENDPOINT = "https://api.pythtest.pyth.network/"
 PYTHTEST_WS_ENDPOINT = "wss://api.pythtest.pyth.network/"
@@ -72,98 +74,104 @@ class Observer:
 
     async def run(self):
         while True:
-            logger.info("Running checks")
+            try:
+                logger.info("Running checks")
 
-            products = await self.get_pyth_products()
-            coingecko_prices, coingecko_updates = await self.get_coingecko_prices()
-            crosschain_prices = await self.get_crosschain_prices()
+                products = await self.get_pyth_products()
+                coingecko_prices, coingecko_updates = await self.get_coingecko_prices()
+                crosschain_prices = await self.get_crosschain_prices()
 
-            for product in products:
-                # Skip tombstone accounts with blank metadata
-                if "base" not in product.attrs:
-                    continue
+                health_server.observer_ready = True
 
-                if not product.first_price_account_key:
-                    continue
-
-                # For each product, we build a list of price feed states (one
-                # for each price account) and a list of publisher states (one
-                # for each publisher).
-                states = []
-                price_accounts = await self.get_pyth_prices(product)
-
-                crosschain_price = crosschain_prices.get(
-                    b58decode(product.first_price_account_key.key).hex(), None
-                )
-
-                for _, price_account in price_accounts.items():
-                    # Handle potential None for min_publishers
-                    if (
-                        price_account.min_publishers is None
-                        # When min_publishers is high it means that the price is not production-ready
-                        # yet and it is still being tested. We need no alerting for these prices.
-                        or price_account.min_publishers >= 10
-                    ):
+                for product in products:
+                    # Skip tombstone accounts with blank metadata
+                    if "base" not in product.attrs:
                         continue
 
-                    # Ensure latest_block_slot is not None or provide a default value
-                    latest_block_slot = (
-                        price_account.slot if price_account.slot is not None else -1
+                    if not product.first_price_account_key:
+                        continue
+
+                    # For each product, we build a list of price feed states (one
+                    # for each price account) and a list of publisher states (one
+                    # for each publisher).
+                    states = []
+                    price_accounts = await self.get_pyth_prices(product)
+
+                    crosschain_price = crosschain_prices.get(
+                        b58decode(product.first_price_account_key.key).hex(), None
                     )
 
-                    if not price_account.aggregate_price_status:
-                        raise RuntimeError("Price account status is missing")
+                    for _, price_account in price_accounts.items():
+                        # Handle potential None for min_publishers
+                        if (
+                            price_account.min_publishers is None
+                            # When min_publishers is high it means that the price is not production-ready
+                            # yet and it is still being tested. We need no alerting for these prices.
+                            or price_account.min_publishers >= 10
+                        ):
+                            continue
 
-                    if not price_account.aggregate_price_info:
-                        raise RuntimeError("Aggregate price info is missing")
-
-                    states.append(
-                        PriceFeedState(
-                            symbol=product.attrs["symbol"],
-                            asset_type=product.attrs["asset_type"],
-                            schedule=MarketSchedule(product.attrs["schedule"]),
-                            public_key=price_account.key,
-                            status=price_account.aggregate_price_status,
-                            # this is the solana block slot when price account was fetched
-                            latest_block_slot=latest_block_slot,
-                            latest_trading_slot=price_account.last_slot,
-                            price_aggregate=price_account.aggregate_price_info.price,
-                            confidence_interval_aggregate=price_account.aggregate_price_info.confidence_interval,
-                            coingecko_price=coingecko_prices.get(product.attrs["base"]),
-                            coingecko_update=coingecko_updates.get(
-                                product.attrs["base"]
-                            ),
-                            crosschain_price=crosschain_price,
+                        # Ensure latest_block_slot is not None or provide a default value
+                        latest_block_slot = (
+                            price_account.slot if price_account.slot is not None else -1
                         )
-                    )
 
-                    for component in price_account.price_components:
-                        pub = self.publishers.get(component.publisher_key.key, None)
-                        publisher_name = (
-                            (pub.name if pub else "")
-                            + f" ({component.publisher_key.key})"
-                        ).strip()
+                        if not price_account.aggregate_price_status:
+                            raise RuntimeError("Price account status is missing")
+
+                        if not price_account.aggregate_price_info:
+                            raise RuntimeError("Aggregate price info is missing")
+
                         states.append(
-                            PublisherState(
-                                publisher_name=publisher_name,
+                            PriceFeedState(
                                 symbol=product.attrs["symbol"],
                                 asset_type=product.attrs["asset_type"],
                                 schedule=MarketSchedule(product.attrs["schedule"]),
-                                public_key=component.publisher_key,
-                                confidence_interval=component.latest_price_info.confidence_interval,
-                                confidence_interval_aggregate=price_account.aggregate_price_info.confidence_interval,
-                                price=component.latest_price_info.price,
-                                price_aggregate=price_account.aggregate_price_info.price,
-                                slot=component.latest_price_info.pub_slot,
-                                aggregate_slot=price_account.last_slot,
+                                public_key=price_account.key,
+                                status=price_account.aggregate_price_status,
                                 # this is the solana block slot when price account was fetched
                                 latest_block_slot=latest_block_slot,
-                                status=component.latest_price_info.price_status,
-                                aggregate_status=price_account.aggregate_price_status,
+                                latest_trading_slot=price_account.last_slot,
+                                price_aggregate=price_account.aggregate_price_info.price,
+                                confidence_interval_aggregate=price_account.aggregate_price_info.confidence_interval,
+                                coingecko_price=coingecko_prices.get(product.attrs["base"]),
+                                coingecko_update=coingecko_updates.get(
+                                    product.attrs["base"]
+                                ),
+                                crosschain_price=crosschain_price,
                             )
                         )
 
-                await self.dispatch.run(states)
+                        for component in price_account.price_components:
+                            pub = self.publishers.get(component.publisher_key.key, None)
+                            publisher_name = (
+                                (pub.name if pub else "")
+                                + f" ({component.publisher_key.key})"
+                            ).strip()
+                            states.append(
+                                PublisherState(
+                                    publisher_name=publisher_name,
+                                    symbol=product.attrs["symbol"],
+                                    asset_type=product.attrs["asset_type"],
+                                    schedule=MarketSchedule(product.attrs["schedule"]),
+                                    public_key=component.publisher_key,
+                                    confidence_interval=component.latest_price_info.confidence_interval,
+                                    confidence_interval_aggregate=price_account.aggregate_price_info.confidence_interval,
+                                    price=component.latest_price_info.price,
+                                    price_aggregate=price_account.aggregate_price_info.price,
+                                    slot=component.latest_price_info.pub_slot,
+                                    aggregate_slot=price_account.last_slot,
+                                    # this is the solana block slot when price account was fetched
+                                    latest_block_slot=latest_block_slot,
+                                    status=component.latest_price_info.price_status,
+                                    aggregate_status=price_account.aggregate_price_status,
+                                )
+                            )
+
+                    await self.dispatch.run(states)
+            except Exception as e:
+                logger.error(f"Error in run loop: {e}")
+                health_server.observer_ready = False
 
             logger.debug("Sleeping...")
             await asyncio.sleep(5)

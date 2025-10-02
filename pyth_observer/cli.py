@@ -9,6 +9,7 @@ from prometheus_client import start_http_server
 
 from pyth_observer import Observer, Publisher
 from pyth_observer.models import ContactInfo
+from pyth_observer.health_server import start_health_server
 
 
 @click.command()
@@ -61,7 +62,15 @@ def run(config, publishers, coingecko_mapping, prometheus_port):
 
     start_http_server(int(prometheus_port))
 
-    asyncio.run(observer.run())
+    async def main():
+        # Start health server in background
+        health_task = asyncio.create_task(start_health_server())
+        # Run observer
+        await observer.run()
+        # Optionally, wait for health server (should run forever)
+        await health_task
+
+    asyncio.run(main())
 
 
 logger.remove()

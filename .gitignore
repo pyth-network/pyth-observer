@@ -1,6 +1,7 @@
 __pycache__/
 *.py[cod]
 *$py.class
+poetry.toml
 
 .DS_Store
 .envrc
@@ -8,3 +9,4 @@ __pycache__/
 
 .env
 .vscode/
+.idea/
