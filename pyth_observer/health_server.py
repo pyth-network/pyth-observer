@@ -1,16 +1,20 @@
 import asyncio
+
 from aiohttp import web
 
 observer_ready = False
 
+
 async def live_handler(request):
     return web.Response(text="OK")
+
 
 async def ready_handler(request):
     if observer_ready:
         return web.Response(text="OK")
     else:
         return web.Response(status=503, text="Not Ready")
+
 
 async def start_health_server(port=8080):
     app = web.Application()
@@ -22,4 +26,3 @@ async def start_health_server(port=8080):
     await site.start()
     while True:
         await asyncio.sleep(3600)
-

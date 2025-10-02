@@ -17,6 +17,7 @@ from pythclient.solana import (
 )
 from throttler import Throttler
 
+import pyth_observer.health_server as health_server
 from pyth_observer.check.price_feed import PriceFeedState
 from pyth_observer.check.publisher import PublisherState
 from pyth_observer.coingecko import Symbol, get_coingecko_prices
@@ -24,7 +25,6 @@ from pyth_observer.crosschain import CrosschainPrice
 from pyth_observer.crosschain import CrosschainPriceObserver as Crosschain
 from pyth_observer.dispatch import Dispatch
 from pyth_observer.models import Publisher
-import pyth_observer.health_server as health_server
 
 PYTHTEST_HTTP_ENDPOINT = "https://api.pythtest.pyth.network/"
 PYTHTEST_WS_ENDPOINT = "wss://api.pythtest.pyth.network/"
@@ -133,7 +133,9 @@ class Observer:
                                 latest_trading_slot=price_account.last_slot,
                                 price_aggregate=price_account.aggregate_price_info.price,
                                 confidence_interval_aggregate=price_account.aggregate_price_info.confidence_interval,
-                                coingecko_price=coingecko_prices.get(product.attrs["base"]),
+                                coingecko_price=coingecko_prices.get(
+                                    product.attrs["base"]
+                                ),
                                 coingecko_update=coingecko_updates.get(
                                     product.attrs["base"]
                                 ),
