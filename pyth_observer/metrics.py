@@ -13,8 +13,6 @@ from prometheus_client import (
 
 
 class PythObserverMetrics:
-    observer_ready = Gauge("pyth_observer_up", "Pyth observer is up")
-
     def __init__(self, registry: CollectorRegistry = REGISTRY):
         self.registry = registry
 
@@ -149,9 +147,6 @@ class PythObserverMetrics:
             ["network", "endpoint_type"],
             registry=registry,
         )
-
-        self.observer_up = 1
-        self.observer_ready = 0
 
     def set_observer_info(self, network: str, config: Dict[str, Any]):
         """Set static information about the observer instance."""

@@ -77,8 +77,6 @@ class Observer:
             config=config,
         )
 
-        metrics.observer_up = 1
-
     async def run(self):
         # global states
         states = []
@@ -91,7 +89,6 @@ class Observer:
                 crosschain_prices = await self.get_crosschain_prices()
 
                 health_server.observer_ready = True
-                metrics.observer_ready = 1
 
                 processed_feeds = 0
                 active_publishers_by_symbol = {}
@@ -205,10 +202,7 @@ class Observer:
             except Exception as e:
                 logger.error(f"Error in run loop: {e}")
                 health_server.observer_ready = False
-                metrics.observer_ready = 0
                 metrics.loop_errors_total.labels(error_type=type(e).__name__).inc()
-
-                metrics.observer_ready = 0
             await asyncio.sleep(5)
 
     async def get_pyth_products(self) -> List[PythProductAccount]:
