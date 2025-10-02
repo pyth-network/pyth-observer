@@ -55,10 +55,9 @@ class Observer:
         config: Dict[str, Any],
         publishers: Dict[str, Publisher],
         coingecko_mapping: Dict[str, Symbol],
-        disable_telegram: bool = False,
     ):
         self.config = config
-        self.dispatch = Dispatch(config, publishers, disable_telegram)
+        self.dispatch = Dispatch(config, publishers)
         self.publishers = publishers
         self.pyth_client = PythClient(
             solana_endpoint=config["network"]["http_endpoint"],
@@ -76,7 +75,6 @@ class Observer:
         metrics.set_observer_info(
             network=config["network"]["name"],
             config=config,
-            telegram_enabled=not disable_telegram,
         )
 
     async def run(self):
