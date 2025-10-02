@@ -62,6 +62,7 @@ ARG APP_PATH
 
 WORKDIR $APP_PATH
 RUN poetry build --format wheel
+RUN poetry self add poetry-plugin-export
 RUN poetry export --format requirements.txt --output constraints.txt --without-hashes
 
 #
