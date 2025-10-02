@@ -29,9 +29,10 @@ class Dispatch:
     notifiers for the checks that failed.
     """
 
-    def __init__(self, config, publishers):
+    def __init__(self, config, publishers, disable_telegram=False):
         self.config = config
         self.publishers = publishers
+        self.disable_telegram = disable_telegram
         if "ZendutyEvent" in self.config["events"]:
             self.open_alerts_file = os.environ["OPEN_ALERTS_FILE"]
             self.open_alerts = self.load_alerts()
@@ -67,6 +68,8 @@ class Dispatch:
         current_time = datetime.now()
         for check in failed_checks:
             for event_type in self.config["events"]:
+                if event_type == "TelegramEvent" and self.disable_telegram:
+                    continue
                 event: Event = globals()[event_type](check, context)
 
                 if event_type in ["ZendutyEvent", "TelegramEvent"]:
