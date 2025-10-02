@@ -1,6 +1,5 @@
 import asyncio
 import os
-import pprint
 from typing import Any, Dict, List, Tuple
 
 from base58 import b58decode

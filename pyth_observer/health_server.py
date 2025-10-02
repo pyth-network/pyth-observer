@@ -20,7 +20,6 @@ async def start_health_server(port=8080):
     await runner.setup()
     site = web.TCPSite(runner, "0.0.0.0", port)
     await site.start()
-    # Keep running forever
     while True:
         await asyncio.sleep(3600)
 

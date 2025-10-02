@@ -63,12 +63,8 @@ def run(config, publishers, coingecko_mapping, prometheus_port):
     start_http_server(int(prometheus_port))
 
     async def main():
-        # Start health server in background
         health_task = asyncio.create_task(start_health_server())
-        # Run observer
         await observer.run()
-        # Optionally, wait for health server (should run forever)
-        await health_task
 
     asyncio.run(main())
 
