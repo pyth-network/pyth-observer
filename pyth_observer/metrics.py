@@ -148,7 +148,9 @@ class PythObserverMetrics:
             registry=registry,
         )
 
-    def set_observer_info(self, network: str, config: Dict[str, Any]):
+    def set_observer_info(
+        self, network: str, config: Dict[str, Any], telegram_enabled: bool = False
+    ):
         """Set static information about the observer instance."""
         self.observer_info.info(
             {
@@ -163,6 +165,7 @@ class PythObserverMetrics:
                     )
                 ),
                 "event_handlers": ",".join(config.get("events", [])),
+                "telegram_enabled": str(int(telegram_enabled)),
             }
         )
 

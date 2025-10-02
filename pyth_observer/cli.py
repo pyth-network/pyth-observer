@@ -37,7 +37,14 @@ from pyth_observer.models import ContactInfo
     envvar="PROMETHEUS_PORT",
     default="9001",
 )
-def run(config, publishers, coingecko_mapping, prometheus_port):
+@click.option(
+    "--disable-telegram",
+    help="Disable sending Telegram notifications",
+    envvar="DISABLE_TELEGRAM",
+    is_flag=True,
+    default=False,
+)
+def run(config, publishers, coingecko_mapping, prometheus_port, disable_telegram):
     config_ = yaml.safe_load(open(config, "r"))
     # Load publishers YAML file and convert to dictionary of Publisher instances
     publishers_raw = yaml.safe_load(open(publishers, "r"))
@@ -54,11 +61,7 @@ def run(config, publishers, coingecko_mapping, prometheus_port):
         for publisher in publishers_raw
     }
     coingecko_mapping_ = yaml.safe_load(open(coingecko_mapping, "r"))
-    observer = Observer(
-        config_,
-        publishers_,
-        coingecko_mapping_,
-    )
+    observer = Observer(config_, publishers_, coingecko_mapping_, disable_telegram)
 
     start_http_server(int(prometheus_port))
 
