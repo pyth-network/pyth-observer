@@ -61,3 +61,11 @@ To integrate Telegram events with the Observer, you need the Telegram group chat
 
 Use this ID in the `publishers.yaml` configuration to correctly set up Telegram events.
 
+## Health Endpoints
+
+The Observer exposes HTTP endpoints for health checks, suitable for Kubernetes liveness and readiness probes:
+
+- **Liveness probe**: `GET /live` always returns `200 OK` with body `OK`.
+- **Readiness probe**: `GET /ready` returns `200 OK` with body `OK` if the observer is ready, otherwise returns `503 Not Ready`.
+
+By default, these endpoints are served on port 8080. You can use them in your Kubernetes deployment to monitor the application's health.

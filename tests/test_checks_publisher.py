@@ -97,7 +97,7 @@ class TestPublisherStalledCheck:
 
         # Seed the cache with the publisher state
         PUBLISHER_CACHE[(state.publisher_name, state.symbol)].append(
-            PriceUpdate(self.current_time, state.price)
+            PriceUpdate(int(self.current_time), state.price)
         )
 
         return check
@@ -191,7 +191,7 @@ class TestPublisherStalledCheck:
             asset_type="Crypto Redemption Rate",
             symbol="Crypto.FUSDC/USDC.RR",
         )
-        check = self.setup_check(state, self.current_time)
+        check = self.setup_check(state, int(self.current_time))
 
         # Should pass even after long period without changes
         self.run_check(check, 3600, True)  # 1 hour

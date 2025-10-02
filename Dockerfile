@@ -3,14 +3,14 @@
 ARG APP_NAME=pyth-observer
 ARG APP_PACKAGE=pyth_observer
 ARG APP_PATH=/opt/$APP_NAME
-ARG PYTHON_VERSION=3.10.4
-ARG POETRY_VERSION=1.2.2
+ARG PYTHON_VERSION=3.11
+ARG POETRY_VERSION=2.1.4
 
 #
 # Stage: base
 #
 
-FROM python:$PYTHON_VERSION as base
+FROM python:$PYTHON_VERSION AS base
 
 ARG APP_NAME
 ARG APP_PATH
@@ -27,8 +27,9 @@ ENV \
     POETRY_NO_INTERACTION=1
 
 # Install Poetry - respects $POETRY_VERSION & $POETRY_HOME
-RUN curl -sSL https://install.python-poetry.org | python
+RUN curl -sSL https://install.python-poetry.org | python - --version $POETRY_VERSION
 ENV PATH="$POETRY_HOME/bin:$PATH"
+RUN which poetry && poetry --version
 
 WORKDIR $APP_PATH
 COPY . .
@@ -37,7 +38,7 @@ COPY . .
 # Stage: development
 #
 
-FROM base as development
+FROM base AS development
 
 ARG APP_NAME
 ARG APP_PATH
@@ -54,20 +55,21 @@ CMD ["$APP_NAME"]
 # Stage: build
 #
 
-FROM base as build
+FROM base AS build
 
 ARG APP_NAME
 ARG APP_PATH
 
 WORKDIR $APP_PATH
 RUN poetry build --format wheel
+RUN poetry self add poetry-plugin-export
 RUN poetry export --format requirements.txt --output constraints.txt --without-hashes
 
 #
 # Stage: production
 #
 
-FROM python:$PYTHON_VERSION as production
+FROM python:$PYTHON_VERSION AS production
 
 ARG APP_NAME
 ARG APP_PATH

@@ -1,10 +1,10 @@
 [tool.mypy]
-python_version = "3.10"
+python_version = "3.11"
 ignore_missing_imports = true
 
 [tool.poetry]
 name = "pyth-observer"
-version = "0.3.5"
+version = "2.1.4"
 description = "Alerts and stuff"
 authors = []
 readme = "README.md"
@@ -28,6 +28,7 @@ types-pyyaml = "^6.0.12"
 types-pytz = "^2022.4.0.0"
 python-dotenv = "^1.0.1"
 numpy = "^2.1.3"
+cffi = "^1.17"
 
 
 [tool.poetry.group.dev.dependencies]
@@ -47,3 +48,6 @@ pyth-observer = "pyth_observer.cli:run"
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.requires-plugins]
+poetry-plugin-export = ">=1.8"

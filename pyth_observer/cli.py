@@ -8,6 +8,7 @@ from loguru import logger
 from prometheus_client import start_http_server
 
 from pyth_observer import Observer, Publisher
+from pyth_observer.health_server import start_health_server
 from pyth_observer.models import ContactInfo
 
 
@@ -61,7 +62,11 @@ def run(config, publishers, coingecko_mapping, prometheus_port):
 
     start_http_server(int(prometheus_port))
 
-    asyncio.run(observer.run())
+    async def main():
+        asyncio.create_task(start_health_server())
+        await observer.run()
+
+    asyncio.run(main())
 
 
 logger.remove()
