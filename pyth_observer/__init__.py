@@ -24,6 +24,7 @@ from pyth_observer.coingecko import Symbol, get_coingecko_prices
 from pyth_observer.crosschain import CrosschainPrice
 from pyth_observer.crosschain import CrosschainPriceObserver as Crosschain
 from pyth_observer.dispatch import Dispatch
+from pyth_observer.metrics import metrics
 from pyth_observer.models import Publisher
 
 PYTHTEST_HTTP_ENDPOINT = "https://api.pythtest.pyth.network/"
@@ -71,7 +72,16 @@ class Observer:
         self.crosschain_throttler = Throttler(rate_limit=1, period=1)
         self.coingecko_mapping = coingecko_mapping
 
+        metrics.set_observer_info(
+            network=config["network"]["name"],
+            config=config,
+        )
+
+        metrics.observer_up = 1
+
     async def run(self):
+        # global states
+        states = []
         while True:
             try:
                 logger.info("Running checks")
@@ -81,6 +91,10 @@ class Observer:
                 crosschain_prices = await self.get_crosschain_prices()
 
                 health_server.observer_ready = True
+                metrics.observer_ready = 1
+
+                processed_feeds = 0
+                active_publishers_by_symbol = {}
 
                 for product in products:
                     # Skip tombstone accounts with blank metadata
@@ -121,27 +135,35 @@ class Observer:
                         if not price_account.aggregate_price_info:
                             raise RuntimeError("Aggregate price info is missing")
 
-                        states.append(
-                            PriceFeedState(
-                                symbol=product.attrs["symbol"],
-                                asset_type=product.attrs["asset_type"],
-                                schedule=MarketSchedule(product.attrs["schedule"]),
-                                public_key=price_account.key,
-                                status=price_account.aggregate_price_status,
-                                # this is the solana block slot when price account was fetched
-                                latest_block_slot=latest_block_slot,
-                                latest_trading_slot=price_account.last_slot,
-                                price_aggregate=price_account.aggregate_price_info.price,
-                                confidence_interval_aggregate=price_account.aggregate_price_info.confidence_interval,
-                                coingecko_price=coingecko_prices.get(
-                                    product.attrs["base"]
-                                ),
-                                coingecko_update=coingecko_updates.get(
-                                    product.attrs["base"]
-                                ),
-                                crosschain_price=crosschain_price,
-                            )
+                        price_feed_state = PriceFeedState(
+                            symbol=product.attrs["symbol"],
+                            asset_type=product.attrs["asset_type"],
+                            schedule=MarketSchedule(product.attrs["schedule"]),
+                            public_key=price_account.key,
+                            status=price_account.aggregate_price_status,
+                            # this is the solana block slot when price account was fetched
+                            latest_block_slot=latest_block_slot,
+                            latest_trading_slot=price_account.last_slot,
+                            price_aggregate=price_account.aggregate_price_info.price,
+                            confidence_interval_aggregate=price_account.aggregate_price_info.confidence_interval,
+                            coingecko_price=coingecko_prices.get(product.attrs["base"]),
+                            coingecko_update=coingecko_updates.get(
+                                product.attrs["base"]
+                            ),
+                            crosschain_price=crosschain_price,
                         )
+
+                        states.append(price_feed_state)
+                        processed_feeds += 1
+
+                        metrics.update_price_feed_metrics(price_feed_state)
+
+                        symbol = product.attrs["symbol"]
+                        if symbol not in active_publishers_by_symbol:
+                            active_publishers_by_symbol[symbol] = {
+                                "count": 0,
+                                "asset_type": product.attrs["asset_type"],
+                            }
 
                         for component in price_account.price_components:
                             pub = self.publishers.get(component.publisher_key.key, None)
@@ -149,52 +171,103 @@ class Observer:
                                 (pub.name if pub else "")
                                 + f" ({component.publisher_key.key})"
                             ).strip()
-                            states.append(
-                                PublisherState(
-                                    publisher_name=publisher_name,
-                                    symbol=product.attrs["symbol"],
-                                    asset_type=product.attrs["asset_type"],
-                                    schedule=MarketSchedule(product.attrs["schedule"]),
-                                    public_key=component.publisher_key,
-                                    confidence_interval=component.latest_price_info.confidence_interval,
-                                    confidence_interval_aggregate=price_account.aggregate_price_info.confidence_interval,
-                                    price=component.latest_price_info.price,
-                                    price_aggregate=price_account.aggregate_price_info.price,
-                                    slot=component.latest_price_info.pub_slot,
-                                    aggregate_slot=price_account.last_slot,
-                                    # this is the solana block slot when price account was fetched
-                                    latest_block_slot=latest_block_slot,
-                                    status=component.latest_price_info.price_status,
-                                    aggregate_status=price_account.aggregate_price_status,
-                                )
+
+                            publisher_state = PublisherState(
+                                publisher_name=publisher_name,
+                                symbol=product.attrs["symbol"],
+                                asset_type=product.attrs["asset_type"],
+                                schedule=MarketSchedule(product.attrs["schedule"]),
+                                public_key=component.publisher_key,
+                                confidence_interval=component.latest_price_info.confidence_interval,
+                                confidence_interval_aggregate=price_account.aggregate_price_info.confidence_interval,
+                                price=component.latest_price_info.price,
+                                price_aggregate=price_account.aggregate_price_info.price,
+                                slot=component.latest_price_info.pub_slot,
+                                aggregate_slot=price_account.last_slot,
+                                # this is the solana block slot when price account was fetched
+                                latest_block_slot=latest_block_slot,
+                                status=component.latest_price_info.price_status,
+                                aggregate_status=price_account.aggregate_price_status,
                             )
 
-                    await self.dispatch.run(states)
+                            states.append(publisher_state)
+                            active_publishers_by_symbol[symbol]["count"] += 1
+
+                metrics.price_feeds_processed.set(processed_feeds)
+
+                for symbol, info in active_publishers_by_symbol.items():
+                    metrics.publishers_active.labels(
+                        symbol=symbol, asset_type=info["asset_type"]
+                    ).set(info["count"])
+
+                await self.dispatch.run(states)
+
             except Exception as e:
                 logger.error(f"Error in run loop: {e}")
                 health_server.observer_ready = False
+                metrics.observer_ready = 0
+                metrics.loop_errors_total.labels(error_type=type(e).__name__).inc()
 
-            logger.debug("Sleeping...")
+                metrics.observer_ready = 0
             await asyncio.sleep(5)
 
     async def get_pyth_products(self) -> List[PythProductAccount]:
         logger.debug("Fetching Pyth product accounts...")
 
-        async with self.pyth_throttler:
-            return await self.pyth_client.refresh_products()
+        try:
+            async with self.pyth_throttler:
+                with metrics.time_operation(
+                    metrics.api_request_duration, service="pyth", endpoint="products"
+                ):
+                    result = await self.pyth_client.refresh_products()
+                    metrics.api_request_total.labels(
+                        service="pyth", endpoint="products", status="success"
+                    ).inc()
+                    return result
+        except Exception:
+            metrics.api_request_total.labels(
+                service="pyth", endpoint="products", status="error"
+            ).inc()
+            raise
 
     async def get_pyth_prices(
         self, product: PythProductAccount
     ) -> Dict[PythPriceType, PythPriceAccount]:
         logger.debug("Fetching Pyth price accounts...")
 
-        async with self.pyth_throttler:
-            return await product.refresh_prices()
+        try:
+            async with self.pyth_throttler:
+                with metrics.time_operation(
+                    metrics.api_request_duration, service="pyth", endpoint="prices"
+                ):
+                    result = await product.refresh_prices()
+                    metrics.api_request_total.labels(
+                        service="pyth", endpoint="prices", status="success"
+                    ).inc()
+                    return result
+        except Exception:
+            metrics.api_request_total.labels(
+                service="pyth", endpoint="prices", status="error"
+            ).inc()
+            raise
 
     async def get_coingecko_prices(self):
         logger.debug("Fetching CoinGecko prices...")
 
-        data = await get_coingecko_prices(self.coingecko_mapping)
+        try:
+            with metrics.time_operation(
+                metrics.api_request_duration, service="coingecko", endpoint="prices"
+            ):
+                data = await get_coingecko_prices(self.coingecko_mapping)
+                metrics.api_request_total.labels(
+                    service="coingecko", endpoint="prices", status="success"
+                ).inc()
+        except Exception:
+            metrics.api_request_total.labels(
+                service="coingecko", endpoint="prices", status="error"
+            ).inc()
+            raise
+
         prices: Dict[str, float] = {}
         updates: Dict[str, int] = {}  # Unix timestamps
 
@@ -205,4 +278,17 @@ class Observer:
         return (prices, updates)
 
     async def get_crosschain_prices(self) -> Dict[str, CrosschainPrice]:
-        return await self.crosschain.get_crosschain_prices()
+        try:
+            with metrics.time_operation(
+                metrics.api_request_duration, service="crosschain", endpoint="prices"
+            ):
+                result = await self.crosschain.get_crosschain_prices()
+                metrics.api_request_total.labels(
+                    service="crosschain", endpoint="prices", status="success"
+                ).inc()
+                return result
+        except Exception:
+            metrics.api_request_total.labels(
+                service="crosschain", endpoint="prices", status="error"
+            ).inc()
+            raise
