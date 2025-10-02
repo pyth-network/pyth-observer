@@ -6,7 +6,6 @@ from datetime import datetime, timedelta
 from typing import Any, Awaitable, Dict, List
 
 from loguru import logger
-from prometheus_client import Gauge
 
 from pyth_observer.check import Check, State
 from pyth_observer.check.price_feed import PRICE_FEED_CHECKS, PriceFeedState
@@ -15,6 +14,7 @@ from pyth_observer.event import DatadogEvent  # Used dynamically
 from pyth_observer.event import LogEvent  # Used dynamically
 from pyth_observer.event import TelegramEvent  # Used dynamically
 from pyth_observer.event import Context, Event, ZendutyEvent
+from pyth_observer.metrics import metrics
 from pyth_observer.zenduty import send_zenduty_alert
 
 assert DatadogEvent
@@ -32,16 +32,6 @@ class Dispatch:
     def __init__(self, config, publishers):
         self.config = config
         self.publishers = publishers
-        self.price_feed_check_gauge = Gauge(
-            "price_feed_check_failed",
-            "Price feed check failure status",
-            ["check", "symbol"],
-        )
-        self.publisher_check_gauge = Gauge(
-            "publisher_check_failed",
-            "Publisher check failure status",
-            ["check", "symbol", "publisher"],
-        )
         if "ZendutyEvent" in self.config["events"]:
             self.open_alerts_file = os.environ["OPEN_ALERTS_FILE"]
             self.open_alerts = self.load_alerts()
@@ -98,47 +88,69 @@ class Dispatch:
                 sent_events.append(event.send())
 
         await asyncio.gather(*sent_events)
+
+        metrics.update_alert_metrics(self.open_alerts)
+
         if "ZendutyEvent" in self.config["events"]:
             await self.process_zenduty_events(current_time)
 
     def check_price_feed(self, state: PriceFeedState) -> List[Check]:
         failed_checks: List[Check] = []
+        total_checks = 0
+        passed_checks = 0
 
         for check_class in PRICE_FEED_CHECKS:
             config = self.load_config(check_class.__name__, state.symbol)
-            check = check_class(state, config)
-            gauge = self.price_feed_check_gauge.labels(
-                check=check_class.__name__,
-                symbol=state.symbol,
-            )
 
             if config["enable"]:
-                if check.run():
-                    gauge.set(0)
+                total_checks += 1
+                check = check_class(state, config)
+
+                with metrics.time_operation(
+                    metrics.check_execution_duration, check_type=check_class.__name__
+                ):
+                    check_passed = check.run()
+
+                if check_passed:
+                    passed_checks += 1
                 else:
                     failed_checks.append(check)
-                    gauge.set(1)
+
+        if total_checks > 0:
+            success_rate = passed_checks / total_checks
+            metrics.check_success_rate.labels(
+                check_type="price_feed", symbol=state.symbol
+            ).set(success_rate)
 
         return failed_checks
 
     def check_publisher(self, state: PublisherState) -> List[Check]:
         failed_checks: List[Check] = []
+        total_checks = 0
+        passed_checks = 0
 
         for check_class in PUBLISHER_CHECKS:
             config = self.load_config(check_class.__name__, state.symbol)
-            check = check_class(state, config)
-            gauge = self.publisher_check_gauge.labels(
-                check=check_class.__name__,
-                symbol=state.symbol,
-                publisher=self.publishers.get(state.public_key, state.public_key),
-            )
 
             if config["enable"]:
-                if check.run():
-                    gauge.set(0)
+                total_checks += 1
+                check = check_class(state, config)
+
+                with metrics.time_operation(
+                    metrics.check_execution_duration, check_type=check_class.__name__
+                ):
+                    check_passed = check.run()
+
+                if check_passed:
+                    passed_checks += 1
                 else:
-                    gauge.set(1)
                     failed_checks.append(check)
+
+        if total_checks > 0:
+            success_rate = passed_checks / total_checks
+            metrics.check_success_rate.labels(
+                check_type="publisher", symbol=state.symbol
+            ).set(success_rate)
 
         return failed_checks
 
@@ -187,12 +199,16 @@ class Dispatch:
             ):
                 logger.debug(f"Resolving Zenduty alert {identifier}")
                 resolved = True
+
                 if info["sent"]:
                     response = await send_zenduty_alert(
                         identifier, identifier, resolved=True
                     )
                     if response and 200 <= response.status < 300:
                         to_remove.append(identifier)
+                        metrics.alerts_sent_total.labels(
+                            alert_type=info["type"], channel="zenduty"
+                        ).inc()
                 else:
                     to_remove.append(identifier)
             # Raise alert if failed > $threshold times within the last 5m window
@@ -216,6 +232,10 @@ class Dispatch:
                     event = self.delayed_events.get(key)
                     if event:
                         to_alert.append(event.send())
+                        metrics.alerts_sent_total.labels(
+                            alert_type=info["type"],
+                            channel=event_type.lower().replace("event", ""),
+                        ).inc()
 
         # Send the alerts that were delayed due to thresholds
         await asyncio.gather(*to_alert)
@@ -228,6 +248,8 @@ class Dispatch:
                 key = f"{event_type}-{identifier}"
                 if self.delayed_events.get(key):
                     del self.delayed_events[key]
+
+        metrics.update_alert_metrics(self.open_alerts)
 
         with open(self.open_alerts_file, "w") as file:
             json.dump(self.open_alerts, file)
