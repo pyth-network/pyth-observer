@@ -32,6 +32,7 @@ class Dispatch:
     def __init__(self, config, publishers):
         self.config = config
         self.publishers = publishers
+        self.open_alerts = {}
         if "ZendutyEvent" in self.config["events"]:
             self.open_alerts_file = os.environ["OPEN_ALERTS_FILE"]
             self.open_alerts = self.load_alerts()

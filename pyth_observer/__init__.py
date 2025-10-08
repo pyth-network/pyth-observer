@@ -190,14 +190,14 @@ class Observer:
                             states.append(publisher_state)
                             active_publishers_by_symbol[symbol]["count"] += 1
 
-                metrics.price_feeds_processed.set(processed_feeds)
+                    metrics.price_feeds_processed.set(processed_feeds)
 
-                for symbol, info in active_publishers_by_symbol.items():
-                    metrics.publishers_active.labels(
-                        symbol=symbol, asset_type=info["asset_type"]
-                    ).set(info["count"])
+                    for symbol, info in active_publishers_by_symbol.items():
+                        metrics.publishers_active.labels(
+                            symbol=symbol, asset_type=info["asset_type"]
+                        ).set(info["count"])
 
-                await self.dispatch.run(states)
+                    await self.dispatch.run(states)
 
             except Exception as e:
                 logger.error(f"Error in run loop: {e}")
