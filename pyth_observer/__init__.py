@@ -200,7 +200,11 @@ class Observer:
                     await self.dispatch.run(states)
 
             except Exception as e:
-                logger.error(f"Error in run loop: {e}")
+                logger.exception(f"Error in run loop: {repr(e)}")
+                if "product" in locals():
+                    logger.error(
+                        f"Product attrs during error: {product.attrs}"  # pyright: ignore[reportPossiblyUnboundVariable]
+                    )
                 health_server.observer_ready = False
                 metrics.loop_errors_total.labels(error_type=type(e).__name__).inc()
             await asyncio.sleep(5)
