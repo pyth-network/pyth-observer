@@ -7,8 +7,8 @@ Observe Pyth on-chain price feeds and run sanity checks on the data.
 Container images are available at https://github.com/pyth-network/pyth-observer/pkgs/container/pyth-observer
 
 To run Observer locally, you will need: 
-- Python 3.10 ([pyenv](https://github.com/pyenv/pyenv) is a nice way to manage Python installs, and once installed will automatically set the version to 3.10 for this project dir via the `.python-version` file).
-- [Poetry](https://python-poetry.org), which handles package and virtualenv management. 
+- Python 3.11 ([pyenv](https://github.com/pyenv/pyenv) is a nice way to manage Python installs, and once installed will automatically set the version to 3.10 for this project dir via the `.python-version` file).
+- [Poetry] v2.1.4 (https://python-poetry.org), which handles package and virtualenv management. 
 
 Install dependencies and run the service:
 ```sh
