@@ -270,6 +270,12 @@ class Observer:
         updates: Dict[str, int] = {}  # Unix timestamps
 
         for symbol in data:
+            if "usd" not in data[symbol] or "last_updated_at" not in data[symbol]:
+                logger.warning(
+                    f"CoinGecko data for {symbol} doesn't include `usd` and/or `last_updated_at`. CoinGecko returned: {data[symbol]}."
+                )
+                continue
+
             prices[symbol] = data[symbol]["usd"]
             updates[symbol] = data[symbol]["last_updated_at"]
 
