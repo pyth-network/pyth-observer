@@ -27,16 +27,16 @@ class Event(Protocol):
     check: Check
     context: Context
 
-    async def send(self):
+    async def send(self) -> None:
         ...
 
 
 class DatadogEvent(Event):
-    def __init__(self, check: Check, context: Context):
+    def __init__(self, check: Check, context: Context) -> None:
         self.check = check
         self.context = context
 
-    async def send(self):
+    async def send(self) -> None:
         # Publisher checks expect the key -> name mapping of publishers when
         # generating the error title/message.
         event_content = self.check.error_message()
@@ -90,11 +90,11 @@ class DatadogEvent(Event):
 
 
 class LogEvent(Event):
-    def __init__(self, check: Check, context: Context):
+    def __init__(self, check: Check, context: Context) -> None:
         self.check = check
         self.context = context
 
-    async def send(self):
+    async def send(self) -> None:
         # Publisher checks expect the key -> name mapping of publishers when
         # generating the error title/message.
         event = self.check.error_message()
@@ -103,12 +103,12 @@ class LogEvent(Event):
 
 
 class TelegramEvent(Event):
-    def __init__(self, check: Check, context: Context):
+    def __init__(self, check: Check, context: Context) -> None:
         self.check = check
         self.context = context
         self.telegram_bot_token = os.environ["TELEGRAM_BOT_TOKEN"]
 
-    async def send(self):
+    async def send(self) -> None:
         if self.check.__class__.__bases__ == (PublisherCheck,):
             text = self.check.error_message()
             publisher_key = self.check.state().public_key.key
@@ -154,11 +154,11 @@ class TelegramEvent(Event):
 
 
 class ZendutyEvent(Event):
-    def __init__(self, check: Check, context: Context):
+    def __init__(self, check: Check, context: Context) -> None:
         self.check = check
         self.context = context
 
-    async def send(self):
+    async def send(self) -> None:
         event_details = self.check.error_message()
         summary = ""
         for key, value in event_details.items():

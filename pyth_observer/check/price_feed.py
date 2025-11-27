@@ -1,7 +1,7 @@
 import time
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Dict, Optional, Protocol, runtime_checkable
+from typing import Any, Dict, Optional, Protocol, runtime_checkable
 from zoneinfo import ZoneInfo
 
 import arrow
@@ -33,7 +33,7 @@ PriceFeedCheckConfig = Dict[str, str | float | int | bool]
 
 @runtime_checkable
 class PriceFeedCheck(Protocol):
-    def __init__(self, state: PriceFeedState, config: PriceFeedCheckConfig):
+    def __init__(self, state: PriceFeedState, config: PriceFeedCheckConfig) -> None:
         ...
 
     def state(self) -> PriceFeedState:
@@ -42,12 +42,12 @@ class PriceFeedCheck(Protocol):
     def run(self) -> bool:
         ...
 
-    def error_message(self) -> dict:
+    def error_message(self) -> Dict[str, Any]:
         ...
 
 
 class PriceFeedOfflineCheck(PriceFeedCheck):
-    def __init__(self, state: PriceFeedState, config: PriceFeedCheckConfig):
+    def __init__(self, state: PriceFeedState, config: PriceFeedCheckConfig) -> None:
         self.__state = state
         self.__max_slot_distance: int = int(config["max_slot_distance"])
         self.__abandoned_slot_distance: int = int(config["abandoned_slot_distance"])
@@ -79,7 +79,7 @@ class PriceFeedOfflineCheck(PriceFeedCheck):
         # Fail
         return False
 
-    def error_message(self) -> dict:
+    def error_message(self) -> Dict[str, Any]:
         distance = self.__state.latest_block_slot - self.__state.latest_trading_slot
         return {
             "msg": f"{self.__state.symbol} is offline (either non-trading/stale). Last update {distance} slots ago.",
@@ -91,7 +91,7 @@ class PriceFeedOfflineCheck(PriceFeedCheck):
 
 
 class PriceFeedCoinGeckoCheck(PriceFeedCheck):
-    def __init__(self, state: PriceFeedState, config: PriceFeedCheckConfig):
+    def __init__(self, state: PriceFeedState, config: PriceFeedCheckConfig) -> None:
         self.__state = state
         self.__max_deviation: int = int(config["max_deviation"])  # Percentage
         self.__max_staleness: int = int(config["max_staleness"])  # Seconds
@@ -124,7 +124,7 @@ class PriceFeedCoinGeckoCheck(PriceFeedCheck):
         # Fail
         return False
 
-    def error_message(self) -> dict:
+    def error_message(self) -> Dict[str, Any]:
         return {
             "msg": f"{self.__state.symbol} is too far from Coingecko's price.",
             "type": "PriceFeedCoinGeckoCheck",
@@ -135,7 +135,7 @@ class PriceFeedCoinGeckoCheck(PriceFeedCheck):
 
 
 class PriceFeedConfidenceIntervalCheck(PriceFeedCheck):
-    def __init__(self, state: PriceFeedState, config: PriceFeedCheckConfig):
+    def __init__(self, state: PriceFeedState, config: PriceFeedCheckConfig) -> None:
         self.__state = state
         self.__min_confidence_interval: int = int(config["min_confidence_interval"])
 
@@ -154,7 +154,7 @@ class PriceFeedConfidenceIntervalCheck(PriceFeedCheck):
         # Fail
         return False
 
-    def error_message(self) -> dict:
+    def error_message(self) -> Dict[str, Any]:
         return {
             "msg": f"{self.__state.symbol} confidence interval is too low.",
             "type": "PriceFeedConfidenceIntervalCheck",
@@ -164,7 +164,7 @@ class PriceFeedConfidenceIntervalCheck(PriceFeedCheck):
 
 
 class PriceFeedCrossChainOnlineCheck(PriceFeedCheck):
-    def __init__(self, state: PriceFeedState, config: PriceFeedCheckConfig):
+    def __init__(self, state: PriceFeedState, config: PriceFeedCheckConfig) -> None:
         self.__state = state
         self.__max_staleness: int = int(config["max_staleness"])
 
@@ -204,7 +204,7 @@ class PriceFeedCrossChainOnlineCheck(PriceFeedCheck):
         # Fail
         return False
 
-    def error_message(self) -> dict:
+    def error_message(self) -> Dict[str, Any]:
         if self.__state.crosschain_price:
             publish_time = arrow.get(self.__state.crosschain_price["publish_time"])
         else:
@@ -219,7 +219,7 @@ class PriceFeedCrossChainOnlineCheck(PriceFeedCheck):
 
 
 class PriceFeedCrossChainDeviationCheck(PriceFeedCheck):
-    def __init__(self, state: PriceFeedState, config: PriceFeedCheckConfig):
+    def __init__(self, state: PriceFeedState, config: PriceFeedCheckConfig) -> None:
         self.__state = state
         self.__max_deviation: int = int(config["max_deviation"])
         self.__max_staleness: int = int(config["max_staleness"])
@@ -262,7 +262,7 @@ class PriceFeedCrossChainDeviationCheck(PriceFeedCheck):
         # Fail
         return False
 
-    def error_message(self) -> dict:
+    def error_message(self) -> Dict[str, Any]:
         # It can never happen because of the check logic but linter could not understand it.
         price = (
             self.__state.crosschain_price["price"]

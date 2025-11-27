@@ -15,6 +15,7 @@ from pyth_observer.event import LogEvent  # Used dynamically
 from pyth_observer.event import TelegramEvent  # Used dynamically
 from pyth_observer.event import Context, Event, ZendutyEvent
 from pyth_observer.metrics import metrics
+from pyth_observer.models import Publisher
 from pyth_observer.zenduty import send_zenduty_alert
 
 assert DatadogEvent
@@ -29,25 +30,27 @@ class Dispatch:
     notifiers for the checks that failed.
     """
 
-    def __init__(self, config, publishers):
+    def __init__(
+        self, config: Dict[str, Any], publishers: Dict[str, Publisher]
+    ) -> None:
         self.config = config
         self.publishers = publishers
-        self.open_alerts = {}
+        self.open_alerts: Dict[str, Any] = {}
         if "ZendutyEvent" in self.config["events"]:
             self.open_alerts_file = os.environ["OPEN_ALERTS_FILE"]
             self.open_alerts = self.load_alerts()
             # below is used to store events to later send if mutilple failures occur
             # events cannot be stored in open_alerts as they are not JSON serializable.
-            self.delayed_events = {}
+            self.delayed_events: Dict[str, Event] = {}
 
-    def load_alerts(self):
+    def load_alerts(self) -> Dict[str, Any]:
         try:
             with open(self.open_alerts_file, "r") as file:
                 return json.load(file)
         except FileNotFoundError:
             return {}  # Return an empty dict if the file doesn't exist
 
-    async def run(self, states: List[State]):
+    async def run(self, states: List[State]) -> None:
         # First, run each check and store the ones that failed
         failed_checks: List[Check] = []
 
@@ -60,7 +63,7 @@ class Dispatch:
                 raise RuntimeError("Unknown state")
 
         # Then, wrap each failed check in events and send them
-        sent_events: List[Awaitable] = []
+        sent_events: List[Awaitable[None]] = []
         context = Context(
             network=self.config["network"]["name"], publishers=self.publishers
         )
@@ -165,14 +168,16 @@ class Dispatch:
         return config
 
     # Zenduty Functions
-    def generate_alert_identifier(self, check):
+    def generate_alert_identifier(self, check: Check) -> str:
         alert_identifier = f"{check.__class__.__name__}-{check.state().symbol}"
         state = check.state()
         if isinstance(state, PublisherState):
             alert_identifier += f"-{state.publisher_name}"
         return alert_identifier
 
-    def check_zd_alert_status(self, alert_identifier, current_time):
+    def check_zd_alert_status(
+        self, alert_identifier: str, current_time: datetime
+    ) -> None:
         alert = self.open_alerts.get(alert_identifier)
         if alert is not None:
             # Reset the failure count if 5m has elapsed
@@ -183,7 +188,7 @@ class Dispatch:
                 alert["last_window_failures"] = alert["failures"]
                 alert["failures"] = 0
 
-    async def process_zenduty_events(self, current_time):
+    async def process_zenduty_events(self, current_time: datetime) -> None:
         to_remove = []
         to_alert = []
 

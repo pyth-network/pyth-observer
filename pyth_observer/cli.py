@@ -1,6 +1,7 @@
 import asyncio
 import os
 import sys
+from typing import Any, Dict
 
 import click
 import yaml
@@ -37,11 +38,13 @@ from pyth_observer.models import ContactInfo
     envvar="PROMETHEUS_PORT",
     default="9001",
 )
-def run(config, publishers, coingecko_mapping, prometheus_port):
-    config_ = yaml.safe_load(open(config, "r"))
+def run(
+    config: str, publishers: str, coingecko_mapping: str, prometheus_port: str
+) -> None:
+    config_: Dict[str, Any] = yaml.safe_load(open(config, "r"))  # type: ignore[assignment]
     # Load publishers YAML file and convert to dictionary of Publisher instances
-    publishers_raw = yaml.safe_load(open(publishers, "r"))
-    publishers_ = {
+    publishers_raw: list[Dict[str, Any]] = yaml.safe_load(open(publishers, "r"))  # type: ignore[assignment]
+    publishers_: Dict[str, Publisher] = {
         publisher["key"]: Publisher(
             key=publisher["key"],
             name=publisher["name"],
@@ -53,7 +56,7 @@ def run(config, publishers, coingecko_mapping, prometheus_port):
         )
         for publisher in publishers_raw
     }
-    coingecko_mapping_ = yaml.safe_load(open(coingecko_mapping, "r"))
+    coingecko_mapping_: Dict[str, Any] = yaml.safe_load(open(coingecko_mapping, "r"))  # type: ignore[assignment]
     observer = Observer(
         config_,
         publishers_,
@@ -62,7 +65,7 @@ def run(config, publishers, coingecko_mapping, prometheus_port):
 
     start_http_server(int(prometheus_port))
 
-    async def main():
+    async def main() -> None:
         asyncio.create_task(start_health_server())
         await observer.run()
 
