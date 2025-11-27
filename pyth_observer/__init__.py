@@ -2,7 +2,6 @@ import asyncio
 import os
 from typing import Any, Dict, List, Literal, Tuple
 
-from base58 import b58decode
 from loguru import logger
 from pythclient.market_schedule import MarketSchedule
 from pythclient.pythaccounts import PythProductAccount
@@ -22,8 +21,6 @@ from pyth_observer.check import State
 from pyth_observer.check.price_feed import PriceFeedState
 from pyth_observer.check.publisher import PublisherState
 from pyth_observer.coingecko import Symbol, get_coingecko_prices
-from pyth_observer.crosschain import CrosschainPrice
-from pyth_observer.crosschain import CrosschainPriceObserver as Crosschain
 from pyth_observer.dispatch import Dispatch
 from pyth_observer.metrics import metrics
 from pyth_observer.models import Publisher
@@ -71,8 +68,6 @@ class Observer:
             rate_limit=int(config["network"]["request_rate_limit"]),
             period=float(config["network"]["request_rate_period"]),
         )
-        self.crosschain = Crosschain(self.config["network"]["crosschain_endpoint"])
-        self.crosschain_throttler = Throttler(rate_limit=1, period=1)
         self.coingecko_mapping = coingecko_mapping
 
         metrics.set_observer_info(
@@ -89,12 +84,9 @@ class Observer:
 
                 products = await self.get_pyth_products()
                 coingecko_prices, coingecko_updates = await self.get_coingecko_prices()
-                crosschain_prices = await self.get_crosschain_prices()
                 await self.refresh_all_pyth_prices()
 
-                logger.info(
-                    "Refreshed all state: products, coingecko, crosschain, pyth"
-                )
+                logger.info("Refreshed all state: products, coingecko, pyth")
 
                 health_server.observer_ready = True
 
@@ -114,10 +106,6 @@ class Observer:
                     # for each publisher).
                     states: List[State] = []
                     price_accounts = product.prices
-
-                    crosschain_price = crosschain_prices.get(
-                        b58decode(product.first_price_account_key.key).hex(), None
-                    )
 
                     for _, price_account in price_accounts.items():
                         # Handle potential None for min_publishers
@@ -155,7 +143,6 @@ class Observer:
                             coingecko_update=coingecko_updates.get(
                                 product.attrs["base"]
                             ),
-                            crosschain_price=crosschain_price,
                         )
 
                         states.append(price_feed_state)
@@ -288,19 +275,3 @@ class Observer:
             updates[symbol] = data[symbol]["last_updated_at"]
 
         return (prices, updates)
-
-    async def get_crosschain_prices(self) -> Dict[str, CrosschainPrice]:
-        try:
-            with metrics.time_operation(
-                metrics.api_request_duration, service="crosschain", endpoint="prices"
-            ):
-                result = await self.crosschain.get_crosschain_prices()
-                metrics.api_request_total.labels(
-                    service="crosschain", endpoint="prices", status="success"
-                ).inc()
-                return result
-        except Exception:
-            metrics.api_request_total.labels(
-                service="crosschain", endpoint="prices", status="error"
-            ).inc()
-            raise

@@ -131,13 +131,6 @@ class PythObserverMetrics:
             registry=registry,
         )
 
-        self.crosschain_price_age = Gauge(
-            "pyth_observer_crosschain_price_age_seconds",
-            "Age of cross-chain price data in seconds",
-            ["symbol"],
-            registry=registry,
-        )
-
         self.latest_block_slot = Gauge(
             "pyth_observer_latest_block_slot",
             "Latest Solana block slot observed",
@@ -204,13 +197,6 @@ class PythObserverMetrics:
             if state.coingecko_update:
                 age = time.time() - state.coingecko_update
                 self.coingecko_price_age.labels(symbol=state.symbol).set(age)
-
-        if state.crosschain_price and state.crosschain_price.get("publish_time"):
-            age = (
-                state.crosschain_price["snapshot_time"]
-                - state.crosschain_price["publish_time"]
-            )
-            self.crosschain_price_age.labels(symbol=state.symbol).set(age)
 
         self.latest_block_slot.set(state.latest_block_slot)
 

@@ -3,7 +3,6 @@ network:
   http_endpoint: "https://api2.pythnet.pyth.network"
   ws_endpoint: "wss://api2.pythnet.pyth.network"
   first_mapping: "AHtgzX45WTKfkPG53L6WYhGEXwQkN1BVknET3sVsLL8J"
-  crosschain_endpoint: "https://hermes.pyth.network"
   request_rate_limit: 10
   request_rate_period: 1
 events:
@@ -28,13 +27,8 @@ checks:
       enable: true
       max_deviation: 5
       max_staleness: 60
-    PriceFeedCrossChainOnlineCheck:
-      enable: true
-      max_staleness: 60
-    PriceFeedCrossChainDeviationCheck:
-      enable: true
-      max_deviation: 5
-      max_staleness: 60
+    PriceFeedConfidenceIntervalCheck:
+      enable: false
     # Publisher checks
     PublisherWithinAggregateConfidenceCheck:
       enable: false

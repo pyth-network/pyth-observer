@@ -4,12 +4,9 @@ from datetime import datetime
 from typing import Any, Dict, Optional, Protocol, runtime_checkable
 from zoneinfo import ZoneInfo
 
-import arrow
 from pythclient.market_schedule import MarketSchedule
 from pythclient.pythaccounts import PythPriceStatus
 from pythclient.solana import SolanaPublicKey
-
-from pyth_observer.crosschain import CrosschainPrice
 
 
 @dataclass
@@ -25,7 +22,6 @@ class PriceFeedState:
     confidence_interval_aggregate: float
     coingecko_price: Optional[float]
     coingecko_update: Optional[int]
-    crosschain_price: Optional[CrosschainPrice]
 
 
 PriceFeedCheckConfig = Dict[str, str | float | int | bool]
@@ -167,128 +163,8 @@ class PriceFeedConfidenceIntervalCheck(PriceFeedCheck):
         }
 
 
-class PriceFeedCrossChainOnlineCheck(PriceFeedCheck):
-    def __init__(self, state: PriceFeedState, config: PriceFeedCheckConfig) -> None:
-        self.__state = state
-        self.__max_staleness: int = int(config["max_staleness"])
-
-    def state(self) -> PriceFeedState:
-        return self.__state
-
-    def run(self) -> bool:
-        # Skip if not trading
-        if self.__state.status != PythPriceStatus.TRADING:
-            return True
-
-        market_open = self.__state.schedule.is_market_open(
-            datetime.now(ZoneInfo("America/New_York")),
-        )
-
-        # Skip if not trading hours (for equities)
-        if not market_open:
-            return True
-
-        # Price should exist, it fails otherwise
-        if not self.__state.crosschain_price:
-            return False
-
-        # Skip if publish time is zero
-        if not self.__state.crosschain_price["publish_time"]:
-            return True
-
-        staleness = (
-            self.__state.crosschain_price["snapshot_time"]
-            - self.__state.crosschain_price["publish_time"]
-        )
-
-        # Pass if current staleness is less than `max_staleness`
-        if staleness < self.__max_staleness:
-            return True
-
-        # Fail
-        return False
-
-    def error_message(self) -> Dict[str, Any]:
-        if self.__state.crosschain_price:
-            publish_time = arrow.get(self.__state.crosschain_price["publish_time"])
-        else:
-            publish_time = arrow.get(0)
-
-        return {
-            "msg": f"{self.__state.symbol} isn't online at the price service.",
-            "type": "PriceFeedCrossChainOnlineCheck",
-            "symbol": self.__state.symbol,
-            "last_publish_time": publish_time.format("YYYY-MM-DD HH:mm:ss ZZ"),
-        }
-
-
-class PriceFeedCrossChainDeviationCheck(PriceFeedCheck):
-    def __init__(self, state: PriceFeedState, config: PriceFeedCheckConfig) -> None:
-        self.__state = state
-        self.__max_deviation: float = float(config["max_deviation"])
-        self.__max_staleness: int = int(config["max_staleness"])
-
-    def state(self) -> PriceFeedState:
-        return self.__state
-
-    def run(self) -> bool:
-        # Skip if does not exist
-        if not self.__state.crosschain_price:
-            return True
-
-        # Skip if not trading
-        if self.__state.status != PythPriceStatus.TRADING:
-            return True
-
-        market_open = self.__state.schedule.is_market_open(
-            datetime.now(ZoneInfo("America/New_York")),
-        )
-
-        # Skip if not trading hours (for equities)
-        if not market_open:
-            return True
-
-        staleness = int(time.time()) - self.__state.crosschain_price["publish_time"]
-
-        # Skip if price is stale
-        if staleness > self.__max_staleness:
-            return True
-
-        # Skip if price aggregate is zero
-        if self.__state.price_aggregate == 0:
-            return True
-
-        deviation = (
-            abs(self.__state.crosschain_price["price"] - self.__state.price_aggregate)
-            / self.__state.price_aggregate
-        ) * 100
-
-        # Pass if price isn't higher than maxium deviation
-        if deviation < self.__max_deviation:
-            return True
-
-        # Fail
-        return False
-
-    def error_message(self) -> Dict[str, Any]:
-        # It can never happen because of the check logic but linter could not understand it.
-        price = (
-            self.__state.crosschain_price["price"]
-            if self.__state.crosschain_price
-            else None
-        )
-        return {
-            "msg": f"{self.__state.symbol} is too far at the price service.",
-            "type": "PriceFeedCrossChainDeviationCheck",
-            "symbol": self.__state.symbol,
-            "price": self.__state.price_aggregate,
-            "price_at_price_service": price,
-        }
-
-
 PRICE_FEED_CHECKS = [
     PriceFeedCoinGeckoCheck,
-    PriceFeedCrossChainDeviationCheck,
-    PriceFeedCrossChainOnlineCheck,
+    PriceFeedConfidenceIntervalCheck,
     PriceFeedOfflineCheck,
 ]

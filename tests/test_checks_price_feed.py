@@ -18,12 +18,6 @@ def test_price_feed_offline_check():
         confidence_interval_aggregate=10.0,
         coingecko_price=1005.0,
         coingecko_update=0,
-        crosschain_price={
-            "price": 1003.0,
-            "conf": 10.0,
-            "publish_time": 123,
-            "snapshot_time": 123,
-        },
     )
 
     assert PriceFeedOfflineCheck(
