@@ -93,7 +93,7 @@ class PriceFeedOfflineCheck(PriceFeedCheck):
 class PriceFeedCoinGeckoCheck(PriceFeedCheck):
     def __init__(self, state: PriceFeedState, config: PriceFeedCheckConfig) -> None:
         self.__state = state
-        self.__max_deviation: int = int(config["max_deviation"])  # Percentage
+        self.__max_deviation: float = float(config["max_deviation"])  # Percentage
         self.__max_staleness: int = int(config["max_staleness"])  # Seconds
 
     def state(self) -> PriceFeedState:
@@ -225,7 +225,7 @@ class PriceFeedCrossChainOnlineCheck(PriceFeedCheck):
 class PriceFeedCrossChainDeviationCheck(PriceFeedCheck):
     def __init__(self, state: PriceFeedState, config: PriceFeedCheckConfig) -> None:
         self.__state = state
-        self.__max_deviation: int = int(config["max_deviation"])
+        self.__max_deviation: float = float(config["max_deviation"])
         self.__max_staleness: int = int(config["max_staleness"])
 
     def state(self) -> PriceFeedState:

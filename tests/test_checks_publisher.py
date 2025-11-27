@@ -46,7 +46,7 @@ def make_publisher_state(
 
 def test_publisher_price_check():
     def check_is_ok(
-        state: PublisherState, max_aggregate_distance: int, max_slot_distance: int
+        state: PublisherState, max_aggregate_distance: float, max_slot_distance: int
     ) -> bool:
         return PublisherPriceCheck(
             state,
