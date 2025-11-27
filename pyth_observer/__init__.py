@@ -5,7 +5,7 @@ from typing import Any, Dict, List, Literal, Tuple
 from base58 import b58decode
 from loguru import logger
 from pythclient.market_schedule import MarketSchedule
-from pythclient.pythaccounts import PythPriceAccount, PythPriceType, PythProductAccount
+from pythclient.pythaccounts import PythProductAccount
 from pythclient.pythclient import PythClient
 from pythclient.solana import (
     SOLANA_DEVNET_HTTP_ENDPOINT,
@@ -90,6 +90,11 @@ class Observer:
                 products = await self.get_pyth_products()
                 coingecko_prices, coingecko_updates = await self.get_coingecko_prices()
                 crosschain_prices = await self.get_crosschain_prices()
+                await self.refresh_all_pyth_prices()
+
+                logger.info(
+                    "Refreshed all state: products, coingecko, crosschain, pyth"
+                )
 
                 health_server.observer_ready = True
 
@@ -108,7 +113,7 @@ class Observer:
                     # for each price account) and a list of publisher states (one
                     # for each publisher).
                     states: List[State] = []
-                    price_accounts = await self.get_pyth_prices(product)
+                    price_accounts = product.prices
 
                     crosschain_price = crosschain_prices.get(
                         b58decode(product.first_price_account_key.key).hex(), None
@@ -231,21 +236,19 @@ class Observer:
             ).inc()
             raise
 
-    async def get_pyth_prices(
-        self, product: PythProductAccount
-    ) -> Dict[PythPriceType, PythPriceAccount]:
-        logger.debug("Fetching Pyth price accounts...")
+    async def refresh_all_pyth_prices(self) -> None:
+        """Refresh all Pyth prices once for all products."""
+        logger.debug("Refreshing all Pyth price accounts...")
 
         try:
             async with self.pyth_throttler:
                 with metrics.time_operation(
                     metrics.api_request_duration, service="pyth", endpoint="prices"
                 ):
-                    result = await product.refresh_prices()
+                    await self.pyth_client.refresh_all_prices()
                     metrics.api_request_total.labels(
                         service="pyth", endpoint="prices", status="success"
                     ).inc()
-                    return result
         except Exception:
             metrics.api_request_total.labels(
                 service="pyth", endpoint="prices", status="error"
