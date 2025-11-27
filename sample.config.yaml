@@ -10,7 +10,7 @@ events:
   - LogEvent
   # - DatadogEvent
   # - TelegramEvent
-  - ZendutyEvent
+  # - ZendutyEvent
 # Alert thresholds apply to Zenduty and Telegram events
 # - Checks run approximately once per minute
 #   - `alert_threshold`: number of failures within 5 minutes >= to this value trigger an alert (default: 5)

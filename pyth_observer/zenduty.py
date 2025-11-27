@@ -1,6 +1,7 @@
 import asyncio
 import hashlib
 import os
+from typing import Optional
 
 import aiohttp
 from loguru import logger
@@ -8,7 +9,12 @@ from loguru import logger
 headers = {"Content-Type": "application/json"}
 
 
-async def send_zenduty_alert(alert_identifier, message, resolved=False, summary=""):
+async def send_zenduty_alert(
+    alert_identifier: str,
+    message: str,
+    resolved: bool = False,
+    summary: str = "",
+) -> Optional[aiohttp.ClientResponse]:
     url = f"https://events.zenduty.com/api/events/{os.environ['ZENDUTY_INTEGRATION_KEY']}/"
     # Use a hash of the alert_identifier as a unique id for the alert.
     # Take the first 32 characters due to length limit of the api.

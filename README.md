@@ -14,7 +14,7 @@ Install dependencies and run the service:
 ```sh
 $ poetry env use $(which python) # point Poetry to the pyenv python shim
 $ poetry install
-$ poetry run pyth-observer
+$ poetry run pyth-observe --config sample.config.yaml --publishers sample.publishers.yaml --coingecko-mapping sample.coingecko.yaml
 ```
 
 Use `poetry run pyth-observer --help` for documentation on arguments and environment variables.

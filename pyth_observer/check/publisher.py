@@ -2,7 +2,7 @@ import time
 from collections import defaultdict, deque
 from dataclasses import asdict, dataclass
 from datetime import datetime
-from typing import Dict, Protocol, runtime_checkable
+from typing import Any, Dict, Protocol, runtime_checkable
 from zoneinfo import ZoneInfo
 
 from loguru import logger
@@ -54,7 +54,7 @@ PublisherCheckConfig = Dict[str, str | float | int | bool]
 
 @runtime_checkable
 class PublisherCheck(Protocol):
-    def __init__(self, state: PublisherState, config: PublisherCheckConfig):
+    def __init__(self, state: PublisherState, config: PublisherCheckConfig) -> None:
         ...
 
     def state(self) -> PublisherState:
@@ -63,12 +63,12 @@ class PublisherCheck(Protocol):
     def run(self) -> bool:
         ...
 
-    def error_message(self) -> dict:
+    def error_message(self) -> Dict[str, Any]:
         ...
 
 
 class PublisherWithinAggregateConfidenceCheck(PublisherCheck):
-    def __init__(self, state: PublisherState, config: PublisherCheckConfig):
+    def __init__(self, state: PublisherState, config: PublisherCheckConfig) -> None:
         self.__state = state
         self.__max_interval_distance: int = int(config["max_interval_distance"])
 
@@ -103,7 +103,7 @@ class PublisherWithinAggregateConfidenceCheck(PublisherCheck):
         # Fail
         return False
 
-    def error_message(self) -> dict:
+    def error_message(self) -> Dict[str, Any]:
         diff = self.__state.price - self.__state.price_aggregate
         intervals_away = abs(diff / self.__state.confidence_interval_aggregate)
         return {
@@ -117,7 +117,7 @@ class PublisherWithinAggregateConfidenceCheck(PublisherCheck):
 
 
 class PublisherConfidenceIntervalCheck(PublisherCheck):
-    def __init__(self, state: PublisherState, config: PublisherCheckConfig):
+    def __init__(self, state: PublisherState, config: PublisherCheckConfig) -> None:
         self.__state = state
         self.__min_confidence_interval: int = int(config["min_confidence_interval"])
 
@@ -141,7 +141,7 @@ class PublisherConfidenceIntervalCheck(PublisherCheck):
         # Fail
         return False
 
-    def error_message(self) -> dict:
+    def error_message(self) -> Dict[str, Any]:
         return {
             "msg": f"{self.__state.publisher_name} confidence interval is too tight.",
             "type": "PublisherConfidenceIntervalCheck",
@@ -153,7 +153,7 @@ class PublisherConfidenceIntervalCheck(PublisherCheck):
 
 
 class PublisherOfflineCheck(PublisherCheck):
-    def __init__(self, state: PublisherState, config: PublisherCheckConfig):
+    def __init__(self, state: PublisherState, config: PublisherCheckConfig) -> None:
         self.__state = state
         self.__max_slot_distance: int = int(config["max_slot_distance"])
         self.__abandoned_slot_distance: int = int(config["abandoned_slot_distance"])
@@ -182,7 +182,7 @@ class PublisherOfflineCheck(PublisherCheck):
         # Fail
         return False
 
-    def error_message(self) -> dict:
+    def error_message(self) -> Dict[str, Any]:
         distance = self.__state.latest_block_slot - self.__state.slot
         return {
             "msg": f"{self.__state.publisher_name} hasn't published recently for {distance} slots.",
@@ -195,7 +195,7 @@ class PublisherOfflineCheck(PublisherCheck):
 
 
 class PublisherPriceCheck(PublisherCheck):
-    def __init__(self, state: PublisherState, config: PublisherCheckConfig):
+    def __init__(self, state: PublisherState, config: PublisherCheckConfig) -> None:
         self.__state = state
         self.__max_aggregate_distance: int = int(config["max_aggregate_distance"])  # %
         self.__max_slot_distance: int = int(config["max_slot_distance"])  # Slots
@@ -230,7 +230,7 @@ class PublisherPriceCheck(PublisherCheck):
         # Fail
         return False
 
-    def error_message(self) -> dict:
+    def error_message(self) -> Dict[str, Any]:
         deviation = (self.ci_adjusted_price_diff() / self.__state.price_aggregate) * 100
         return {
             "msg": f"{self.__state.publisher_name} price is too far from aggregate price.",
@@ -250,7 +250,7 @@ class PublisherPriceCheck(PublisherCheck):
 
 
 class PublisherStalledCheck(PublisherCheck):
-    def __init__(self, state: PublisherState, config: PublisherCheckConfig):
+    def __init__(self, state: PublisherState, config: PublisherCheckConfig) -> None:
         self.__state = state
         self.__stall_time_limit: int = int(
             config["stall_time_limit"]
@@ -313,7 +313,7 @@ class PublisherStalledCheck(PublisherCheck):
 
         return not result.is_stalled
 
-    def error_message(self) -> dict:
+    def error_message(self) -> Dict[str, Any]:
         stall_duration = f"{self.__last_analysis.duration:.1f} seconds"
         return {
             "msg": f"{self.__state.publisher_name} has been publishing the same price of {self.__state.symbol} for {stall_duration}",

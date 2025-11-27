@@ -1,6 +1,6 @@
 import asyncio
 import os
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Literal, Tuple
 
 from base58 import b58decode
 from loguru import logger
@@ -18,6 +18,7 @@ from pythclient.solana import (
 from throttler import Throttler
 
 import pyth_observer.health_server as health_server
+from pyth_observer.check import State
 from pyth_observer.check.price_feed import PriceFeedState
 from pyth_observer.check.publisher import PublisherState
 from pyth_observer.coingecko import Symbol, get_coingecko_prices
@@ -35,7 +36,9 @@ PYTHNET_WS_ENDPOINT = "wss://pythnet.rpcpool.com/"
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
-def get_solana_urls(network) -> Tuple[str, str]:
+def get_solana_urls(
+    network: Literal["devnet", "testnet", "mainnet", "pythtest", "pythnet"]
+) -> Tuple[str, str]:
     """
     Helper for getting the correct urls for the PythClient
     """
@@ -55,7 +58,7 @@ class Observer:
         config: Dict[str, Any],
         publishers: Dict[str, Publisher],
         coingecko_mapping: Dict[str, Symbol],
-    ):
+    ) -> None:
         self.config = config
         self.dispatch = Dispatch(config, publishers)
         self.publishers = publishers
@@ -77,9 +80,9 @@ class Observer:
             config=config,
         )
 
-    async def run(self):
+    async def run(self) -> None:
         # global states
-        states = []
+        states: List[State] = []
         while True:
             try:
                 logger.info("Running checks")
@@ -91,7 +94,7 @@ class Observer:
                 health_server.observer_ready = True
 
                 processed_feeds = 0
-                active_publishers_by_symbol = {}
+                active_publishers_by_symbol: Dict[str, Dict[str, Any]] = {}
 
                 for product in products:
                     # Skip tombstone accounts with blank metadata
@@ -104,7 +107,7 @@ class Observer:
                     # For each product, we build a list of price feed states (one
                     # for each price account) and a list of publisher states (one
                     # for each publisher).
-                    states = []
+                    states: List[State] = []
                     price_accounts = await self.get_pyth_prices(product)
 
                     crosschain_price = crosschain_prices.get(
@@ -249,7 +252,9 @@ class Observer:
             ).inc()
             raise
 
-    async def get_coingecko_prices(self):
+    async def get_coingecko_prices(
+        self,
+    ) -> Tuple[Dict[str, float], Dict[str, int]]:
         logger.debug("Fetching CoinGecko prices...")
 
         try:

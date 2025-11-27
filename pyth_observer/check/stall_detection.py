@@ -64,7 +64,7 @@ class StallDetector:
         stall_time_limit: float,
         noise_threshold: float = 1e-4,
         min_noise_samples: int = 5,
-    ):
+    ) -> None:
         """
         Initialize stall detector.
 

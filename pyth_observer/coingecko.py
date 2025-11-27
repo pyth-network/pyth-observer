@@ -1,4 +1,4 @@
-from typing import Dict, TypedDict
+from typing import Any, Dict, TypedDict
 
 from loguru import logger
 from pycoingecko import CoinGeckoAPI
@@ -15,7 +15,9 @@ class Symbol(TypedDict):
 # However prices are updated every 1-10 minutes: https://www.coingecko.com/en/faq
 # Hence we only have to query once every minute.
 @throttle(rate_limit=1, period=60)
-async def get_coingecko_prices(mapping: Dict[str, Symbol]):
+async def get_coingecko_prices(
+    mapping: Dict[str, Symbol],
+) -> Dict[str, Dict[str, Any]]:
     inverted_mapping = {mapping[x]["api"]: x for x in mapping}
     ids = [mapping[x]["api"] for x in mapping]
 

@@ -10,6 +10,9 @@ from prometheus_client import (
     Histogram,
     Info,
 )
+from pythclient.pythaccounts import PythPriceStatus
+
+from pyth_observer.check.price_feed import PriceFeedState
 
 
 class PythObserverMetrics:
@@ -175,10 +178,8 @@ class PythObserverMetrics:
             duration = time.time() - start_time
             metric.labels(**labels).observe(duration)
 
-    def update_price_feed_metrics(self, state):
+    def update_price_feed_metrics(self, state: PriceFeedState) -> None:
         labels = {"symbol": state.symbol, "asset_type": state.asset_type}
-
-        from pythclient.pythaccounts import PythPriceStatus
 
         status_value = 1 if state.status == PythPriceStatus.TRADING else 0
         self.price_feed_status.labels(**labels).set(status_value)

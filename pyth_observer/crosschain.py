@@ -16,7 +16,7 @@ class CrosschainPrice(TypedDict):
 
 
 class CrosschainPriceObserver:
-    def __init__(self, url):
+    def __init__(self, url: str) -> None:
         self.url = url
         self.valid = self.is_endpoint_valid()
 
