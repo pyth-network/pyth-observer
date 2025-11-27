@@ -70,7 +70,7 @@ class PublisherCheck(Protocol):
 class PublisherWithinAggregateConfidenceCheck(PublisherCheck):
     def __init__(self, state: PublisherState, config: PublisherCheckConfig) -> None:
         self.__state = state
-        self.__max_interval_distance: int = int(config["max_interval_distance"])
+        self.__max_interval_distance: float = float(config["max_interval_distance"])
 
     def state(self) -> PublisherState:
         return self.__state
@@ -206,7 +206,9 @@ class PublisherOfflineCheck(PublisherCheck):
 class PublisherPriceCheck(PublisherCheck):
     def __init__(self, state: PublisherState, config: PublisherCheckConfig) -> None:
         self.__state = state
-        self.__max_aggregate_distance: int = int(config["max_aggregate_distance"])  # %
+        self.__max_aggregate_distance: float = float(
+            config["max_aggregate_distance"]
+        )  # %
         self.__max_slot_distance: int = int(config["max_slot_distance"])  # Slots
 
     def state(self) -> PublisherState:
