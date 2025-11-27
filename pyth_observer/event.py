@@ -10,6 +10,7 @@ from datadog_api_client.v1.model.event_create_request import EventCreateRequest
 from dotenv import load_dotenv
 from loguru import logger
 
+from pyth_observer.alert_utils import generate_alert_identifier
 from pyth_observer.check import Check
 from pyth_observer.check.publisher import PublisherCheck, PublisherState
 from pyth_observer.models import Publisher
@@ -164,12 +165,9 @@ class ZendutyEvent(Event):
         for key, value in event_details.items():
             summary += f"{key}: {value}\n"
 
-        alert_identifier = (
-            f"{self.check.__class__.__name__}-{self.check.state().symbol}"
-        )
+        alert_identifier = generate_alert_identifier(self.check)
         state = self.check.state()
         if isinstance(state, PublisherState):
-            alert_identifier += f"-{state.publisher_name}"
             symbol = (
                 self.check.state().symbol.replace(".", "-").replace("/", "-").lower()
             )
