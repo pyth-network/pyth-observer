@@ -112,6 +112,10 @@ class PriceFeedCoinGeckoCheck(PriceFeedCheck):
         if self.__state.status != PythPriceStatus.TRADING:
             return True
 
+        # Skip if CoinGecko price is zero
+        if self.__state.coingecko_price == 0:
+            return True
+
         deviation = (
             abs(self.__state.price_aggregate - self.__state.coingecko_price)
             / self.__state.coingecko_price
@@ -248,6 +252,10 @@ class PriceFeedCrossChainDeviationCheck(PriceFeedCheck):
 
         # Skip if price is stale
         if staleness > self.__max_staleness:
+            return True
+
+        # Skip if price aggregate is zero
+        if self.__state.price_aggregate == 0:
             return True
 
         deviation = (

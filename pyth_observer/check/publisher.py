@@ -94,6 +94,11 @@ class PublisherWithinAggregateConfidenceCheck(PublisherCheck):
             return True
 
         diff = self.__state.price - self.__state.price_aggregate
+
+        # Skip if confidence interval aggregate is zero
+        if self.__state.confidence_interval_aggregate == 0:
+            return True
+
         intervals_away = abs(diff / self.__state.confidence_interval_aggregate)
 
         # Pass if price diff is less than max interval distance
@@ -105,7 +110,11 @@ class PublisherWithinAggregateConfidenceCheck(PublisherCheck):
 
     def error_message(self) -> Dict[str, Any]:
         diff = self.__state.price - self.__state.price_aggregate
-        intervals_away = abs(diff / self.__state.confidence_interval_aggregate)
+        if self.__state.confidence_interval_aggregate == 0:
+            intervals_away = abs(diff)
+        else:
+            intervals_away = abs(diff / self.__state.confidence_interval_aggregate)
+
         return {
             "msg": f"{self.__state.publisher_name} price is {intervals_away} times away from confidence.",
             "type": "PublisherWithinAggregateConfidenceCheck",
@@ -218,7 +227,7 @@ class PublisherPriceCheck(PublisherCheck):
             return True
 
         # Skip if published price is zero
-        if self.__state.price == 0:
+        if self.__state.price == 0 or self.__state.price_aggregate == 0:
             return True
 
         deviation = (self.ci_adjusted_price_diff() / self.__state.price_aggregate) * 100
@@ -231,7 +240,13 @@ class PublisherPriceCheck(PublisherCheck):
         return False
 
     def error_message(self) -> Dict[str, Any]:
-        deviation = (self.ci_adjusted_price_diff() / self.__state.price_aggregate) * 100
+        if self.__state.price_aggregate == 0:
+            deviation = self.ci_adjusted_price_diff()
+        else:
+            deviation = (
+                self.ci_adjusted_price_diff() / self.__state.price_aggregate
+            ) * 100
+
         return {
             "msg": f"{self.__state.publisher_name} price is too far from aggregate price.",
             "type": "PublisherPriceCheck",
