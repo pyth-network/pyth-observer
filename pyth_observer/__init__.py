@@ -20,7 +20,7 @@ import pyth_observer.health_server as health_server
 from pyth_observer.check import State
 from pyth_observer.check.price_feed import PriceFeedState
 from pyth_observer.check.publisher import PublisherState
-from pyth_observer.coingecko import Symbol, get_coingecko_prices
+from pyth_observer.coingecko import get_coingecko_prices
 from pyth_observer.dispatch import Dispatch
 from pyth_observer.metrics import metrics
 from pyth_observer.models import Publisher
@@ -54,7 +54,7 @@ class Observer:
         self,
         config: Dict[str, Any],
         publishers: Dict[str, Publisher],
-        coingecko_mapping: Dict[str, Symbol],
+        coingecko_mapping: Dict[str, str],
     ) -> None:
         self.config = config
         self.dispatch = Dispatch(config, publishers)
@@ -95,7 +95,7 @@ class Observer:
 
                 for product in products:
                     # Skip tombstone accounts with blank metadata
-                    if "base" not in product.attrs:
+                    if "symbol" not in product.attrs:
                         continue
 
                     if not product.first_price_account_key:
@@ -139,9 +139,11 @@ class Observer:
                             latest_trading_slot=price_account.last_slot,
                             price_aggregate=price_account.aggregate_price_info.price,
                             confidence_interval_aggregate=price_account.aggregate_price_info.confidence_interval,
-                            coingecko_price=coingecko_prices.get(product.attrs["base"]),
+                            coingecko_price=coingecko_prices.get(
+                                product.attrs["symbol"]
+                            ),
                             coingecko_update=coingecko_updates.get(
-                                product.attrs["base"]
+                                product.attrs["symbol"]
                             ),
                         )
 
