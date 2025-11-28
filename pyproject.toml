@@ -4,7 +4,7 @@ ignore_missing_imports = true
 
 [tool.poetry]
 name = "pyth-observer"
-version = "3.0.0"
+version = "3.0.1"
 description = "Alerts and stuff"
 authors = []
 readme = "README.md"

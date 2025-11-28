@@ -177,7 +177,7 @@ class ZendutyEvent(Event):
                 else self.context["network"]
             )
             publisher_key = state.public_key.key
-            summary += f"https://pyth.network/metrics?price-feed={symbol}&cluster={cluster}&publisher={publisher_key}\n"
+            summary += f"https://legacy.pyth.network/metrics?price-feed={symbol}&cluster={cluster}&publisher={publisher_key}\n"
 
         logger.debug(f"Sending Zenduty alert for {alert_identifier}")
         await send_zenduty_alert(
