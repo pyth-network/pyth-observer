@@ -21,6 +21,63 @@ Use `poetry run pyth-observer --help` for documentation on arguments and environ
 
 To run tests, use `poetry run pytest`.
 
+## Building CoinGecko Mapping
+
+The `scripts/build_coingecko_mapping.py` script automatically generates a CoinGecko mapping file by fetching all price feeds from the Pyth Hermes API and matching them with CoinGecko's coin list using fuzzy matching.
+
+### Basic Usage
+
+```sh
+# Generate a new mapping file
+poetry run python scripts/build_coingecko_mapping.py
+
+# Compare with existing mapping file
+poetry run python scripts/build_coingecko_mapping.py -e sample.coingecko.yaml
+
+# Specify custom output file
+poetry run python scripts/build_coingecko_mapping.py -o my_mapping.json
+
+# Skip price validation (faster, but less thorough)
+poetry run python scripts/build_coingecko_mapping.py --no-validate-prices
+
+# Adjust maximum price deviation threshold (default: 10.0%)
+poetry run python scripts/build_coingecko_mapping.py --max-price-deviation 5.0
+```
+
+### How It Works
+
+1. **Fetches Pyth Price Feeds**: Retrieves all price feeds from `https://hermes.pyth.network/v2/price_feeds`
+2. **Extracts Crypto Symbols**: Filters for Crypto asset types and extracts symbols (e.g., "Crypto.BTC/USD")
+3. **Matches with CoinGecko**: Uses multiple matching strategies:
+   - Exact symbol match (case-insensitive)
+   - Fuzzy symbol matching
+   - Fuzzy name matching based on Pyth description
+4. **Validates Mappings**: Compares generated mappings against known correct mappings
+5. **Validates Prices** (optional): Compares prices from Hermes and CoinGecko to detect mismatches
+6. **Generates Warnings**: Flags symbols that need manual review:
+   - Low-confidence fuzzy matches (shows similarity score)
+   - Symbols with no matches found
+   - Price deviations between sources
+
+### Output
+
+The script generates a JSON file in the format:
+```json
+{
+  "Crypto.BTC/USD": "bitcoin",
+  "Crypto.ETH/USD": "ethereum",
+  ...
+}
+```
+
+The script provides a summary showing:
+- Total symbols mapped
+- Exact matches (100% confidence)
+- Fuzzy matches (needs review)
+- No matches found
+
+Review the warnings output to manually verify and adjust any low-confidence matches before using the generated mapping file.
+
 ## Configuration
 
 See `sample.config.yaml` for configuration options.
