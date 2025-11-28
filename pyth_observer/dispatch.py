@@ -235,13 +235,7 @@ class Dispatch:
                 info["last_window_failures"] is not None
                 and info["last_window_failures"] <= resolution_threshold
             )
-            # Check if current window has low failures (and alert was previously sent)
-            current_window_resolved = (
-                info["sent"]
-                and info["failures"] <= resolution_threshold
-                and info["failures"] < alert_threshold
-            )
-            if last_window_resolved or current_window_resolved:
+            if last_window_resolved:
                 logger.debug(f"Resolving Zenduty alert {identifier}")
                 resolved = True
 
