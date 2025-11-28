@@ -12,6 +12,7 @@ from loguru import logger
 
 from pyth_observer.alert_utils import generate_alert_identifier
 from pyth_observer.check import Check
+from pyth_observer.check.price_feed import PriceFeedState
 from pyth_observer.check.publisher import PublisherCheck, PublisherState
 from pyth_observer.models import Publisher
 from pyth_observer.zenduty import send_zenduty_alert
@@ -178,6 +179,11 @@ class ZendutyEvent(Event):
             )
             publisher_key = state.public_key.key
             summary += f"https://legacy.pyth.network/metrics?price-feed={symbol}&cluster={cluster}&publisher={publisher_key}\n"
+        elif isinstance(state, PriceFeedState):
+            symbol = (
+                self.check.state().symbol.replace(".", "-").replace("/", "-").lower()
+            )
+            summary += f"https://legacy.pyth.network/price-feeds/{symbol}\n"
 
         logger.debug(f"Sending Zenduty alert for {alert_identifier}")
         await send_zenduty_alert(
